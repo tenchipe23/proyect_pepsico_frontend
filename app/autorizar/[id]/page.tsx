@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,9 +22,11 @@ import LoadingIndicator from "@/components/loading-indicator"
 import NavigationGuard from "@/components/navigation-guard"
 
 export default function AutorizarPage({ params }: { params: { id: string } }) {
+  // Get the id from params
+  const { id } = params
   const { getPaseById, updatePase } = usePase()
   const { toast } = useToast()
-  const formRef = useRef<HTMLDivElement>(null)
+  const formRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>
   const [activeSection, setActiveSection] = useState<"firma" | "sello" | null>(null)
   const [pase, setPase] = useState<ReturnType<typeof getPaseById>>(undefined)
   const [isEditing, setIsEditing] = useState(false)
@@ -39,20 +39,22 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
   // Load user data and pase data
   useEffect(() => {
     try {
-      console.log("Cargando datos en la página de detalle, ID:", params.id)
+      console.log("Cargando datos en la página de detalle, ID:", id)
 
       // Get user data
-      const storedUser = localStorage.getItem("user")
-      if (storedUser) {
-        const userData = JSON.parse(storedUser)
-        console.log("Usuario cargado:", userData.name, userData.role)
-        setUser(userData)
-      } else {
-        console.log("No se encontró usuario en localStorage")
+      if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem("user")
+        if (storedUser) {
+          const userData = JSON.parse(storedUser)
+          console.log("Usuario cargado:", userData.name, userData.role)
+          setUser(userData)
+        } else {
+          console.log("No se encontró usuario en localStorage")
+        }
       }
 
       // Check if we're on the dashboard route
-      if (params.id === "dashboard") {
+      if (id === "dashboard") {
         console.log("Detectada ruta de dashboard como ID de pase, redirigiendo...")
         // Redirect to the correct dashboard route
         window.location.href = "/autorizar/dashboard"
@@ -60,10 +62,10 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
       }
 
       // Load pass data
-      const paseData = getPaseById(params.id)
+      const paseData = getPaseById(id)
       if (!paseData) {
         console.log("Pase no encontrado")
-        setLoadError(`No se encontró el pase con ID: ${params.id}`)
+        setLoadError(`No se encontró el pase con ID: ${id}`)
         setIsLoading(false)
         return
       }
@@ -97,7 +99,7 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
       setLoadError("Error al cargar los datos. Por favor, intente nuevamente.")
       setIsLoading(false)
     }
-  }, [params.id, getPaseById])
+  }, [id, getPaseById])
 
   // If there's an error loading the pass
   if (loadError) {

@@ -22,18 +22,23 @@ export default function UserManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    email: string;
+    password: string;
+    role: UserRole;
+  }>({
     name: "",
     email: "",
     password: "",
-    role: "autorizador" as UserRole,
+    role: "autorizador",
   })
 
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchQuery.toLowerCase()),
+      (user.role || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,7 +52,7 @@ export default function UserManagement() {
   const handleRoleChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
-      role: value as UserRole,
+      role: (value as UserRole) || 'autorizador',
     }))
   }
 
@@ -62,7 +67,7 @@ export default function UserManagement() {
     }
 
     addUser({
-      id: crypto.randomUUID(),
+      id: require('uuid').v4(),
       name: formData.name,
       email: formData.email,
       password: formData.password,
@@ -146,7 +151,7 @@ export default function UserManagement() {
     setCurrentUser(null)
   }
 
-  const getRoleName = (role: string) => {
+  const getRoleName = (role: string | null) => {
     switch (role) {
       case "admin":
         return "Administrador"
@@ -256,7 +261,7 @@ export default function UserManagement() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select value={formData.role} onValueChange={handleRoleChange}>
+              <Select value={formData.role || ''} onValueChange={handleRoleChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar rol" />
                 </SelectTrigger>
@@ -306,7 +311,7 @@ export default function UserManagement() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-role">Rol</Label>
-              <Select value={formData.role} onValueChange={handleRoleChange}>
+              <Select value={formData.role || ''} onValueChange={handleRoleChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar rol" />
                 </SelectTrigger>

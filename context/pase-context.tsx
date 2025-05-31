@@ -95,7 +95,7 @@ export function PaseProvider({ children }: { children: ReactNode }) {
   const addPase = (pase: PaseData) => {
     const newPase = {
       ...pase,
-      id: crypto.randomUUID(),
+      id: require('uuid').v4(),
       fechaCreacion: new Date().toISOString(),
     }
     setPases((prev) => [...prev, newPase])

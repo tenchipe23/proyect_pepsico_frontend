@@ -9,8 +9,8 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Sistema de Pases de Salida - PepsiCo",
-  description: "Sistema para gestionar pases de salida de transporte",
-    generator: 'v0.dev'
+  description: "Sistema para gestionar pases de salida",
+  creator: 'Jose Manuel Tenchipe del Valle'
 }
 
 export default function RootLayout({

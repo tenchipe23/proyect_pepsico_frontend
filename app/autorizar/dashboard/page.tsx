@@ -102,6 +102,9 @@ export default function AutorizadorDashboardPage() {
 
   // Get new notifications (passes created in the last 24 hours)
   const getNewNotifications = useCallback(() => {
+    // Verificar si estamos en el cliente antes de acceder a localStorage
+    if (typeof window === 'undefined') return []
+    
     const lastChecked = localStorage.getItem("lastNotificationCheck")
     if (!lastChecked) return []
 
@@ -206,9 +209,10 @@ export default function AutorizadorDashboardPage() {
     setShowNotifications(!showNotifications)
     if (!showNotifications) {
       // Mark notifications as read when opening
-      // @ts-ignore - Using the global function we added
-      if (window.updateNotificationLastChecked) {
-        window.updateNotificationLastChecked()
+      // Verificar si la función existe en el contexto global
+      const updateFn = (window as any).updateNotificationLastChecked
+      if (typeof updateFn === 'function') {
+        updateFn()
       }
     }
   }

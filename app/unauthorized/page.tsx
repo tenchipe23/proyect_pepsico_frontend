@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useRouter } from "next/navigation"
 import { ShieldAlertIcon } from "lucide-react"
 import { useEffect, useState } from "react"
+import router from "next/router"
 
 export default function UnauthorizedPage() {
   const router = useRouter()
