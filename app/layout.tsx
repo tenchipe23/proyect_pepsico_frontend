@@ -10,7 +10,8 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Sistema de Pases de Salida - PepsiCo",
   description: "Sistema para gestionar pases de salida",
-  creator: 'Jose Manuel Tenchipe del Valle'
+  creator: 'Jose Manuel Tenchipe del Valle',
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({
