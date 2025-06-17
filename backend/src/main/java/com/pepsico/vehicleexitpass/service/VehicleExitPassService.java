@@ -64,7 +64,7 @@ public class VehicleExitPassService {
             .map(passMapper::toDto);
     }
     
-    public VehicleExitPassDto getPassById(Long id) {
+    public VehicleExitPassDto getPassById(String id) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         return passMapper.toDto(pass);
@@ -93,7 +93,7 @@ public class VehicleExitPassService {
             UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
             User user = userRepository.findById(userPrincipal.getId())
                 .orElse(null);
-            pass.setCreatedBy(user);
+            pass.setOperador(user);
         }
         
         VehicleExitPass savedPass = passRepository.save(pass);
@@ -101,7 +101,7 @@ public class VehicleExitPassService {
         return passMapper.toDto(savedPass);
     }
     
-    public VehicleExitPassDto updatePass(Long id, VehicleExitPassDto passDto) {
+    public VehicleExitPassDto updatePass(String id, VehicleExitPassDto passDto) {
         VehicleExitPass existingPass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
@@ -110,22 +110,14 @@ public class VehicleExitPassService {
         existingPass.setFecha(passDto.getFecha());
         existingPass.setTractorEco(passDto.getTractorEco());
         existingPass.setTractorPlaca(passDto.getTractorPlaca());
-        existingPass.setRemolque1Eco(passDto.getRemolque1Eco());
-        existingPass.setRemolque1Placa(passDto.getRemolque1Placa());
-        existingPass.setRemolque2Eco(passDto.getRemolque2Eco());
-        existingPass.setRemolque2Placa(passDto.getRemolque2Placa());
-        existingPass.setOperadorNombre(passDto.getOperadorNombre());
-        existingPass.setOperadorApellidoPaterno(passDto.getOperadorApellidoPaterno());
-        existingPass.setOperadorApellidoMaterno(passDto.getOperadorApellidoMaterno());
-        existingPass.setEcoDolly(passDto.getEcoDolly());
-        existingPass.setPlacasDolly(passDto.getPlacasDolly());
         existingPass.setComentarios(passDto.getComentarios());
         
         VehicleExitPass updatedPass = passRepository.save(existingPass);
+        bitacoraService.registrarAccion(updatedPass, "ACTUALIZACION", "Pase actualizado");
         return passMapper.toDto(updatedPass);
     }
     
-    public VehicleExitPassDto signPass(Long id, String signature, String seal) {
+    public VehicleExitPassDto signPass(String id, String signature, String seal) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
@@ -143,21 +135,12 @@ public class VehicleExitPassService {
         return passMapper.toDto(updatedPass);
     }
     
-    public VehicleExitPassDto authorizePass(Long id) {
+    public VehicleExitPassDto authorizePass(String id) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
         if (pass.getEstado() != PassStatus.FIRMADO) {
             throw new RuntimeException("Pass can only be authorized when in FIRMADO status");
-        }
-        
-        // Set authorized by user
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
-            UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
-            User user = userRepository.findById(userPrincipal.getId())
-                .orElse(null);
-            pass.setAuthorizedBy(user);
         }
         
         pass.setEstado(PassStatus.AUTORIZADO);
@@ -168,7 +151,7 @@ public class VehicleExitPassService {
         return passMapper.toDto(updatedPass);
     }
     
-    public VehicleExitPassDto rejectPass(Long id, String reason) {
+    public VehicleExitPassDto rejectPass(String id, String reason) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
@@ -180,10 +163,11 @@ public class VehicleExitPassService {
         pass.setComentarios(pass.getComentarios() + "\n\nRechazado: " + reason);
         
         VehicleExitPass updatedPass = passRepository.save(pass);
+        bitacoraService.registrarAccion(updatedPass, "RECHAZO", "Pase rechazado: " + reason);
         return passMapper.toDto(updatedPass);
     }
     
-    public void deletePass(Long id) {
+    public void deletePass(String id) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         

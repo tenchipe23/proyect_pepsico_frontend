@@ -12,8 +12,9 @@ import java.util.Objects;
 
 public class UserPrincipal implements UserDetails {
     
-    private Long id;
-    private String name;
+    private String id;
+    private String nombre;
+    private String apellido;
     private String email;
     
     @JsonIgnore
@@ -21,10 +22,11 @@ public class UserPrincipal implements UserDetails {
     
     private Collection<? extends GrantedAuthority> authorities;
     
-    public UserPrincipal(Long id, String name, String email, String password, 
+    public UserPrincipal(String id, String nombre, String apellido, String email, String password, 
                         Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
-        this.name = name;
+        this.nombre = nombre;
+        this.apellido = apellido;
         this.email = email;
         this.password = password;
         this.authorities = authorities;
@@ -32,24 +34,33 @@ public class UserPrincipal implements UserDetails {
     
     public static UserPrincipal create(User user) {
         Collection<GrantedAuthority> authorities = Collections.singletonList(
-            new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+            new SimpleGrantedAuthority("ROLE_" + user.getRol().name())
         );
         
         return new UserPrincipal(
             user.getId(),
-            user.getName(),
+            user.getNombre(),
+            user.getApellido(),
             user.getEmail(),
             user.getPassword(),
             authorities
         );
     }
     
-    public Long getId() {
+    public String getId() {
         return id;
     }
     
-    public String getName() {
-        return name;
+    public String getNombre() {
+        return nombre;
+    }
+    
+    public String getApellido() {
+        return apellido;
+    }
+    
+    public String getNombreCompleto() {
+        return nombre + " " + apellido;
     }
     
     public String getEmail() {

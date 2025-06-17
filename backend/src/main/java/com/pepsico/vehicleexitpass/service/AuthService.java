@@ -32,9 +32,9 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
         
-        User user = userRepository.findByEmailAndActiveTrue(loginRequest.getEmail())
+        User user = userRepository.findByEmailAndEstadoTrue(loginRequest.getEmail())
             .orElseThrow(() -> new RuntimeException("User not found"));
         
-        return new LoginResponse(jwt, user.getId(), user.getName(), user.getEmail(), user.getRole());
+        return new LoginResponse(jwt, user.getId(), user.getNombreCompleto(), user.getEmail(), user.getRol());
     }
 }

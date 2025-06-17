@@ -8,27 +8,31 @@ import jakarta.validation.constraints.Size;
 
 public class CreateUserRequest {
     
-    @NotBlank(message = "Name is required")
-    @Size(max = 100, message = "Name must not exceed 100 characters")
+    @NotBlank
+    @Size(max = 100)
     private String name;
     
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
-    @Size(max = 100, message = "Email must not exceed 100 characters")
+    @Size(max = 100)
+    private String apellido;
+    
+    @NotBlank
+    @Email
+    @Size(max = 100)
     private String email;
     
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
+    @NotBlank
+    @Size(min = 6, max = 100)
     private String password;
     
-    @NotNull(message = "Role is required")
+    @NotNull
     private UserRole role;
     
     // Constructors
     public CreateUserRequest() {}
     
-    public CreateUserRequest(String name, String email, String password, UserRole role) {
+    public CreateUserRequest(String name, String apellido, String email, String password, UserRole role) {
         this.name = name;
+        this.apellido = apellido;
         this.email = email;
         this.password = password;
         this.role = role;
@@ -37,6 +41,9 @@ public class CreateUserRequest {
     // Getters and Setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    
+    public String getApellido() { return apellido; }
+    public void setApellido(String apellido) { this.apellido = apellido; }
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
