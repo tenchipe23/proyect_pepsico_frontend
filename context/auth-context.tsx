@@ -1,129 +1,90 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-
-export type UserRole = "admin" | "autorizador" | "seguridad" | "cliente" | null
+import type React from "react"
+import { createContext, useState, useEffect, useContext } from "react"
+import { apiClient } from "@/lib/api"
 
 interface User {
-  id: string
+  id: number
   name: string
   email: string
-  role: UserRole
+  role: string
 }
 
-interface AuthContextType {
+interface AuthContextProps {
   user: User | null
-  login: (email: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
-  isAuthenticated: boolean
-  isAuthorized: (allowedRoles: UserRole[]) => boolean
+  loading: boolean
 }
 
-// Usuarios de prueba
-const MOCK_USERS = [
-  {
-    id: "1",
-    name: "Administrador",
-    email: "admin@pepsico.com",
-    password: "admin123",
-    role: "admin" as UserRole,
-  },
-  {
-    id: "2",
-    name: "Autorizador",
-    email: "autorizador@pepsico.com",
-    password: "auth123",
-    role: "autorizador" as UserRole,
-  },
-  {
-    id: "3",
-    name: "Seguridad",
-    email: "seguridad@pepsico.com",
-    password: "seg123",
-    role: "seguridad" as UserRole,
-  },
-]
-
-// Crear el contexto con un valor por defecto
-const AuthContext = createContext<AuthContextType>({
+const AuthContext = createContext<AuthContextProps>({
   user: null,
-  login: async () => false,
+  login: async () => ({ success: false }),
   logout: () => {},
-  isAuthenticated: false,
-  isAuthorized: () => false,
+  loading: false,
 })
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  // Cargar usuario del localStorage al iniciar
   useEffect(() => {
+    const token = localStorage.getItem("token")
     const storedUser = localStorage.getItem("user")
-    if (storedUser) {
+
+    if (token && storedUser) {
       try {
         setUser(JSON.parse(storedUser))
       } catch (error) {
         console.error("Error parsing user from localStorage:", error)
+        localStorage.removeItem("token")
         localStorage.removeItem("user")
       }
     }
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Buscar usuario
-    const foundUser = MOCK_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
+  const login = async (email: string, password: string) => {
+    try {
+      setLoading(true)
+      const response = await apiClient.login(email, password)
 
-    if (foundUser) {
-      // Crear objeto de usuario sin contraseña
-      const userToStore = {
-        id: foundUser.id,
-        name: foundUser.name,
-        email: foundUser.email,
-        role: foundUser.role,
+      const userData = {
+        id: response.id,
+        name: response.nombre + " " + response.apellido,
+        email: response.email,
+        role: response.rol.toLowerCase(),
       }
 
-      // Guardar en localStorage
-      localStorage.setItem("user", JSON.stringify(userToStore))
+      setUser(userData)
+      localStorage.setItem("token", response.token)
+      localStorage.setItem("user", JSON.stringify(userData))
 
-      // Actualizar estado
-      setUser(userToStore)
-      return true
+      return { success: true }
+    } catch (error) {
+      console.error("Login error:", error)
+      return { success: false, error: "Credenciales inválidas" }
+    } finally {
+      setLoading(false)
     }
-
-    return false
   }
 
   const logout = () => {
-    localStorage.removeItem("user")
     setUser(null)
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
   }
 
-  const isAuthenticated = !!user
-
-  const isAuthorized = (allowedRoles: UserRole[]) => {
-    if (!user) return false
-    return allowedRoles.includes(user.role)
+  const value: AuthContextProps = {
+    user,
+    login,
+    logout,
+    loading,
   }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        isAuthenticated,
-        isAuthorized,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
+export const useAuth = () => {
+  return useContext(AuthContext)
 }

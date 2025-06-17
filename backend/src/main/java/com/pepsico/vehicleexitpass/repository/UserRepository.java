@@ -13,25 +13,26 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, String> {
     
     Optional<User> findByEmail(String email);
     
-    Optional<User> findByEmailAndActiveTrue(String email);
+    Optional<User> findByEmailAndEstadoTrue(String email);
     
     boolean existsByEmail(String email);
     
-    List<User> findByRole(UserRole role);
+    List<User> findByRol(UserRole rol);
     
-    List<User> findByActiveTrue();
+    List<User> findByEstadoTrue();
     
-    Page<User> findByActiveTrue(Pageable pageable);
+    Page<User> findByEstadoTrue(Pageable pageable);
     
-    @Query("SELECT u FROM User u WHERE u.active = true AND " +
-           "(LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+    @Query("SELECT u FROM User u WHERE u.estado = true AND " +
+           "(LOWER(u.nombre) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(u.apellido) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<User> findActiveUsersWithSearch(@Param("search") String search, Pageable pageable);
     
-    @Query("SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.active = true")
-    long countByRoleAndActiveTrue(@Param("role") UserRole role);
+    @Query("SELECT COUNT(u) FROM User u WHERE u.rol = :rol AND u.estado = true")
+    long countByRolAndEstadoTrue(@Param("rol") UserRole rol);
 }

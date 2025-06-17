@@ -34,6 +34,9 @@ public class VehicleExitPassService {
     
     @Autowired
     private VehicleExitPassMapper passMapper;
+
+    @Autowired
+    private BitacoraService bitacoraService;
     
     public List<VehicleExitPassDto> getAllPasses() {
         return passRepository.findAll().stream()
@@ -94,6 +97,7 @@ public class VehicleExitPassService {
         }
         
         VehicleExitPass savedPass = passRepository.save(pass);
+        bitacoraService.registrarAccion(savedPass, "CREACION", "Pase creado");
         return passMapper.toDto(savedPass);
     }
     
@@ -135,6 +139,7 @@ public class VehicleExitPassService {
         pass.setFechaFirma(LocalDateTime.now());
         
         VehicleExitPass updatedPass = passRepository.save(pass);
+        bitacoraService.registrarAccion(updatedPass, "FIRMA", "Pase firmado con sello digital");
         return passMapper.toDto(updatedPass);
     }
     
@@ -159,6 +164,7 @@ public class VehicleExitPassService {
         pass.setFechaAutorizacion(LocalDateTime.now());
         
         VehicleExitPass updatedPass = passRepository.save(pass);
+        bitacoraService.registrarAccion(updatedPass, "AUTORIZACION", "Pase autorizado");
         return passMapper.toDto(updatedPass);
     }
     

@@ -12,26 +12,32 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "usuarios")
 @EntityListeners(AuditingEntityListener.class)
 public class User {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @NotBlank
-    @Size(max = 100)
-    @Column(nullable = false)
-    private String name;
+    @Column(name = "id", columnDefinition = "VARCHAR(36)")
+    private String id;
     
     @NotBlank
     @Email
     @Size(max = 100)
     @Column(nullable = false, unique = true)
     private String email;
+    
+    @NotBlank
+    @Size(max = 100)
+    @Column(nullable = false)
+    private String nombre;
+    
+    @NotBlank
+    @Size(max = 100)
+    @Column(nullable = false)
+    private String apellido;
     
     @NotBlank
     @Size(min = 6, max = 100)
@@ -41,64 +47,77 @@ public class User {
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private UserRole role;
-    
-    @Column(nullable = false)
-    private Boolean active = true;
+    private UserRole rol;
     
     @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
     
     @LastModifiedDate
-    private LocalDateTime updatedAt;
+    @Column(name = "ultimo_acceso")
+    private LocalDateTime ultimoAcceso;
     
-    @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
-    private Set<VehicleExitPass> createdPasses = new HashSet<>();
+    @Column(nullable = false)
+    private Boolean estado = true;
     
-    @OneToMany(mappedBy = "authorizedBy", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "operador", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
-    private Set<VehicleExitPass> authorizedPasses = new HashSet<>();
+    private Set<VehicleExitPass> pases = new HashSet<>();
+    
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private Set<Bitacora> bitacoras = new HashSet<>();
     
     // Constructors
-    public User() {}
+    public User() {
+        this.id = UUID.randomUUID().toString();
+    }
     
-    public User(String name, String email, String password, UserRole role) {
-        this.name = name;
+    public User(String email, String nombre, String apellido, String password, UserRole rol) {
+        this();
         this.email = email;
+        this.nombre = nombre;
+        this.apellido = apellido;
         this.password = password;
-        this.role = role;
+        this.rol = rol;
     }
     
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
     
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    
+    public String getApellido() { return apellido; }
+    public void setApellido(String apellido) { this.apellido = apellido; }
+    
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
     
-    public UserRole getRole() { return role; }
-    public void setRole(UserRole role) { this.role = role; }
+    public UserRole getRol() { return rol; }
+    public void setRol(UserRole rol) { this.rol = rol; }
     
-    public Boolean getActive() { return active; }
-    public void setActive(Boolean active) { this.active = active; }
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
     
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUltimoAcceso() { return ultimoAcceso; }
+    public void setUltimoAcceso(LocalDateTime ultimoAcceso) { this.ultimoAcceso = ultimoAcceso; }
     
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Boolean getEstado() { return estado; }
+    public void setEstado(Boolean estado) { this.estado = estado; }
     
-    public Set<VehicleExitPass> getCreatedPasses() { return createdPasses; }
-    public void setCreatedPasses(Set<VehicleExitPass> createdPasses) { this.createdPasses = createdPasses; }
+    public Set<VehicleExitPass> getPases() { return pases; }
+    public void setPases(Set<VehicleExitPass> pases) { this.pases = pases; }
     
-    public Set<VehicleExitPass> getAuthorizedPasses() { return authorizedPasses; }
-    public void setAuthorizedPasses(Set<VehicleExitPass> authorizedPasses) { this.authorizedPasses = authorizedPasses; }
+    public Set<Bitacora> getBitacoras() { return bitacoras; }
+    public void setBitacoras(Set<Bitacora> bitacoras) { this.bitacoras = bitacoras; }
+    
+    // Método para obtener nombre completo
+    public String getNombreCompleto() {
+        return nombre + " " + apellido;
+    }
 }

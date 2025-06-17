@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: pepsico-postgres
+    environment:
+      POSTGRES_DB: pepsico_vehicle_pass
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pepsico-network
+
+  backend:
+    build: .
+    container_name: pepsico-backend
+    environment:
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+      JWT_SECRET: mySecretKey123456789012345678901234567890
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - pepsico-network
+
+volumes:
+  postgres_data:
+
+networks:
+  pepsico-network:
+    driver: bridge

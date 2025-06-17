@@ -2,9 +2,8 @@ package com.pepsico.vehicleexitpass.entity;
 
 public enum UserRole {
     ADMIN("admin"),
-    AUTORIZADOR("autorizador"),
     SEGURIDAD("seguridad"),
-    CLIENTE("cliente");
+    AUTORIZADOR("autorizador");
     
     private final String value;
     

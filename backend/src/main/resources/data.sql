@@ -1,30 +1,26 @@
--- Insert default users
-INSERT IGNORE INTO users (id, name, email, password, role, active, created_at, updated_at) VALUES
-(1, 'Administrador', 'admin@pepsico.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'ADMIN', true, NOW(), NOW()),
-(2, 'Autorizador', 'autorizador@pepsico.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'AUTORIZADOR', true, NOW(), NOW()),
-(3, 'Seguridad', 'seguridad@pepsico.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'SEGURIDAD', true, NOW(), NOW());
+-- Insertar usuarios por defecto
+INSERT INTO usuarios (id, email, nombre, apellido, password, rol, fecha_creacion, estado) VALUES
+('admin-001', 'admin@pepsico.com', 'Administrador', 'Sistema', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'ADMIN', NOW(), true),
+('seg-001', 'seguridad@pepsico.com', 'Guardia', 'Seguridad', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'SEGURIDAD', NOW(), true),
+('aut-001', 'autorizador@pepsico.com', 'Supervisor', 'Autorizador', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'AUTORIZADOR', NOW(), true);
 
--- Note: The password hash above corresponds to 'password123' - you should change this in production
--- To generate a new hash, you can use: BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(); encoder.encode("yourpassword");
+-- Insertar vehículos de ejemplo
+INSERT INTO vehiculos (id, tipo, numero_economico, placa, descripcion, estado) VALUES
+('veh-001', 'TRACTOR', 'T001', 'ABC-123', 'Tractor Kenworth T800', true),
+('veh-002', 'TRACTOR', 'T002', 'DEF-456', 'Tractor Freightliner Cascadia', true),
+('veh-003', 'REMOLQUE', 'R001', 'GHI-789', 'Remolque 53 pies', true),
+('veh-004', 'REMOLQUE', 'R002', 'JKL-012', 'Remolque 48 pies', true),
+('veh-005', 'DOLLY', 'D001', 'MNO-345', 'Dolly convertidor', true);
 
--- Insert sample vehicle exit passes
-INSERT IGNORE INTO vehicle_exit_passes (
-    id, folio, estado, razon_social, fecha, 
-    tractor_eco, tractor_placa, remolque1_eco, remolque1_placa,
-    operador_nombre, operador_apellido_paterno, operador_apellido_materno,
-    comentarios, fecha_creacion, created_by_id
-) VALUES
-(1, 'PASE-001', 'PENDIENTE', 'Transportes del Norte S.A.', '2024-01-15 08:00:00',
- 'ECO-001', 'ABC-123', 'REM-001', 'DEF-456',
- 'Juan', 'Pérez', 'García',  '2024-01-15 08:00:00',
- 'ECO-001', 'ABC-123', 'REM-001', 'DEF-456',
- 'Juan', 'Pérez', 'García',
- 'Transporte de mercancía general', NOW(), 1),
-(2, 'PASE-002', 'FIRMADO', 'Logística Integral S.A.', '2024-01-16 10:30:00',
- 'ECO-002', 'GHI-789', 'REM-002', 'JKL-012',
- 'María', 'González', 'López',
- 'Carga refrigerada', NOW(), 1),
-(3, 'PASE-003', 'AUTORIZADO', 'Distribuidora Central S.A.', '2024-01-17 14:15:00',
- 'ECO-003', 'MNO-345', 'REM-003', 'PQR-678',
- 'Carlos', 'Rodríguez', 'Martínez',
- 'Entrega urgente', NOW(), 2);
+-- Insertar pase de ejemplo
+INSERT INTO pases (id, folio, estado, razon_social, fecha, tractor_eco, tractor_placa, operador_id, fecha_creacion) VALUES
+('pase-001', 'PASE-2024-001', 'PENDIENTE', 'Transportes PepsiCo', '2024-01-15', 'T001', 'ABC-123', 'seg-001', NOW());
+
+-- Insertar relación pase-vehículo
+INSERT INTO pase_vehiculos (id, pase_id, vehiculo_id, tipo) VALUES
+('pv-001', 'pase-001', 'veh-001', 'TRACTOR'),
+('pv-002', 'pase-001', 'veh-003', 'REMOLQUE1');
+
+-- Insertar entrada en bitácora
+INSERT INTO bitacora (id, pase_id, usuario_id, accion, fecha, detalles) VALUES
+('bit-001', 'pase-001', 'seg-001', 'CREACION', NOW(), 'Pase creado por el sistema');
