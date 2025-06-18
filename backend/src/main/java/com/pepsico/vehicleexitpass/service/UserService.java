@@ -59,7 +59,11 @@ public class UserService {
         
         User user = new User();
         user.setNombre(request.getName());
+<<<<<<< HEAD
         user.setApellido(request.getName()); // Assuming we need to split the name or get it from another field
+=======
+        user.setApellido(request.getApellido() != null ? request.getApellido() : "");
+>>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRol(request.getRole());
@@ -79,11 +83,19 @@ public class UserService {
             throw new RuntimeException("Email is already in use!");
         }
         
+<<<<<<< HEAD
         user.setNombre(userDto.getName());
         user.setApellido(userDto.getName()); // Assuming we need to split the name or get it from another field
         user.setEmail(userDto.getEmail());
         user.setRol(userDto.getRole());
         user.setEstado(userDto.getActive());
+=======
+        user.setNombre(userDto.getNombre());
+        user.setApellido(userDto.getApellido());
+        user.setEmail(userDto.getEmail());
+        user.setRol(userDto.getRol());
+        
+>>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
         User updatedUser = userRepository.save(user);
         return userMapper.toDto(updatedUser);
     }
@@ -97,13 +109,23 @@ public class UserService {
         userRepository.save(user);
     }
     
+<<<<<<< HEAD
     public List<UserDto> getUsersByRole(UserRole rol) {
         return userRepository.findByRolAndEstadoTrue(rol).stream()
+=======
+    public List<UserDto> getUsersByRole(UserRole role) {
+        return userRepository.findByRol(role).stream()
+>>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
             .map(userMapper::toDto)
             .collect(Collectors.toList());
     }
     
+<<<<<<< HEAD
     public long getUserCountByRole(UserRole rol) {
         return userRepository.countByRolAndEstadoTrue(rol);
+=======
+    public long getUserCountByRole(UserRole role) {
+        return userRepository.countByRolAndEstadoTrue(role);
+>>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
     }
 }

@@ -37,6 +37,7 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
         
+<<<<<<< HEAD
         UserPrincipal userDetails = (UserPrincipal) authentication.getPrincipal();
         List<String> roles = userDetails.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
@@ -49,5 +50,11 @@ public class AuthService {
             userDetails.getEmail(),
             roles
         );
+=======
+        User user = userRepository.findByEmailAndEstadoTrue(loginRequest.getEmail())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        return new LoginResponse(jwt, user.getId(), user.getNombreCompleto(), user.getEmail(), user.getRol());
+>>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
     }
 }
