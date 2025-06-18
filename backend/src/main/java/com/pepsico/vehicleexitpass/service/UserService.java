@@ -31,22 +31,22 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
     
     public List<UserDto> getAllUsers() {
-        return userRepository.findByActiveTrue().stream()
+        return userRepository.findByEstadoTrue().stream()
             .map(userMapper::toDto)
             .collect(Collectors.toList());
     }
     
     public Page<UserDto> getAllUsers(Pageable pageable) {
-        return userRepository.findByActiveTrue(pageable)
+        return userRepository.findByEstadoTrue(pageable)
             .map(userMapper::toDto);
     }
     
     public Page<UserDto> searchUsers(String search, Pageable pageable) {
-        return userRepository.findActiveUsersWithSearch(search, pageable)
+        return userRepository.findEstadoTrueUsersWithSearch(search, pageable)
             .map(userMapper::toDto);
     }
     
-    public UserDto getUserById(Long id) {
+    public UserDto getUserById(String id) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         return userMapper.toDto(user);
@@ -58,17 +58,18 @@ public class UserService {
         }
         
         User user = new User();
-        user.setName(request.getName());
+        user.setNombre(request.getName());
+        user.setApellido(request.getName()); // Assuming we need to split the name or get it from another field
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole());
-        user.setActive(true);
+        user.setRol(request.getRole());
+        user.setEstado(true);
         
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
     }
     
-    public UserDto updateUser(Long id, UserDto userDto) {
+    public UserDto updateUser(String id, UserDto userDto) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         
@@ -78,30 +79,31 @@ public class UserService {
             throw new RuntimeException("Email is already in use!");
         }
         
-        user.setName(userDto.getName());
+        user.setNombre(userDto.getName());
+        user.setApellido(userDto.getName()); // Assuming we need to split the name or get it from another field
         user.setEmail(userDto.getEmail());
-        user.setRole(userDto.getRole());
-        
+        user.setRol(userDto.getRole());
+        user.setEstado(userDto.getActive());
         User updatedUser = userRepository.save(user);
         return userMapper.toDto(updatedUser);
     }
     
-    public void deleteUser(Long id) {
+    public void deleteUser(String id) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         
         // Soft delete
-        user.setActive(false);
+        user.setEstado(false);
         userRepository.save(user);
     }
     
-    public List<UserDto> getUsersByRole(UserRole role) {
-        return userRepository.findByRole(role).stream()
+    public List<UserDto> getUsersByRole(UserRole rol) {
+        return userRepository.findByRolAndEstadoTrue(rol).stream()
             .map(userMapper::toDto)
             .collect(Collectors.toList());
     }
     
-    public long getUserCountByRole(UserRole role) {
-        return userRepository.countByRoleAndActiveTrue(role);
+    public long getUserCountByRole(UserRole rol) {
+        return userRepository.countByRolAndEstadoTrue(rol);
     }
 }

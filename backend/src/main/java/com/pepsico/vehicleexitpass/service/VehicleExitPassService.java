@@ -64,7 +64,7 @@ public class VehicleExitPassService {
             .map(passMapper::toDto);
     }
     
-    public VehicleExitPassDto getPassById(Long id) {
+    public VehicleExitPassDto getPassById(String id) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         return passMapper.toDto(pass);
@@ -101,13 +101,13 @@ public class VehicleExitPassService {
         return passMapper.toDto(savedPass);
     }
     
-    public VehicleExitPassDto updatePass(Long id, VehicleExitPassDto passDto) {
+    public VehicleExitPassDto updatePass(String id, VehicleExitPassDto passDto) {
         VehicleExitPass existingPass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
         // Update fields
         existingPass.setRazonSocial(passDto.getRazonSocial());
-        existingPass.setFecha(passDto.getFecha());
+        existingPass.setFecha(passDto.getFecha() != null ? passDto.getFecha().toLocalDate() : null);
         existingPass.setTractorEco(passDto.getTractorEco());
         existingPass.setTractorPlaca(passDto.getTractorPlaca());
         existingPass.setRemolque1Eco(passDto.getRemolque1Eco());
@@ -125,7 +125,7 @@ public class VehicleExitPassService {
         return passMapper.toDto(updatedPass);
     }
     
-    public VehicleExitPassDto signPass(Long id, String signature, String seal) {
+    public VehicleExitPassDto signPass(String id, String signature, String seal) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
@@ -143,7 +143,7 @@ public class VehicleExitPassService {
         return passMapper.toDto(updatedPass);
     }
     
-    public VehicleExitPassDto authorizePass(Long id) {
+    public VehicleExitPassDto authorizePass(String id) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
@@ -168,7 +168,7 @@ public class VehicleExitPassService {
         return passMapper.toDto(updatedPass);
     }
     
-    public VehicleExitPassDto rejectPass(Long id, String reason) {
+    public VehicleExitPassDto rejectPass(String id, String reason) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
@@ -183,7 +183,7 @@ public class VehicleExitPassService {
         return passMapper.toDto(updatedPass);
     }
     
-    public void deletePass(Long id) {
+    public void deletePass(String id) {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
