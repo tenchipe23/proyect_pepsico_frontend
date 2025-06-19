@@ -16,15 +16,10 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, String> {
     
     Optional<User> findByEmailAndEstadoTrue(String email);
-<<<<<<< HEAD
-=======
     
->>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
     List<User> findByEstadoTrue();
+    
     Page<User> findByEstadoTrue(Pageable pageable);
-    List<User> findByRolAndEstadoTrue(UserRole rol);
-    long countByRolAndEstadoTrue(UserRole rol);
-    boolean existsByEmail(String email); 
     
     List<User> findByRol(UserRole rol);
     
@@ -36,9 +31,5 @@ public interface UserRepository extends JpaRepository<User, String> {
            "(LOWER(u.nombre) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(u.apellido) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
-<<<<<<< HEAD
-    Page<User> findEstadoTrueUsersWithSearch(@Param("search") String search, Pageable pageable);
-=======
     Page<User> findActiveUsersWithSearch(@Param("search") String search, Pageable pageable);
->>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
 }

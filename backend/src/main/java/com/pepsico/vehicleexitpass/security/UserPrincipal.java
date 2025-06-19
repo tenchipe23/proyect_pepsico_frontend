@@ -8,72 +8,43 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 
 public class UserPrincipal implements UserDetails {
     
     private String id;
-<<<<<<< HEAD
-    private String name;
-=======
     private String nombre;
     private String apellido;
->>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
     private String email;
-    private Boolean estado;
-    private String role;
     
     @JsonIgnore
     private String password;
     
     private Collection<? extends GrantedAuthority> authorities;
     
-<<<<<<< HEAD
-    public UserPrincipal(String id, String name, String email, String password, 
-                        String role, Boolean estado, 
-=======
     public UserPrincipal(String id, String nombre, String apellido, String email, String password, 
->>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
                         Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.nombre = nombre;
         this.apellido = apellido;
         this.email = email;
         this.password = password;
-        this.role = role;
-        this.estado = estado;
         this.authorities = authorities;
     }
     
     public static UserPrincipal create(User user) {
-<<<<<<< HEAD
-        List<GrantedAuthority> authorities = Collections.singletonList(
-=======
         Collection<GrantedAuthority> authorities = Collections.singletonList(
->>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
             new SimpleGrantedAuthority("ROLE_" + user.getRol().name())
         );
-
+        
         return new UserPrincipal(
             user.getId(),
-<<<<<<< HEAD
-            user.getNombre() + " " + user.getApellido(),
-=======
             user.getNombre(),
             user.getApellido(),
->>>>>>> 06a5d025459bc02eb04ef0e954262d8207c0757d
             user.getEmail(),
             user.getPassword(),
-            user.getRol().name(),
-            user.getEstado(),
             authorities
         );
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
     }
     
     public String getId() {
@@ -104,6 +75,11 @@ public class UserPrincipal implements UserDetails {
     @Override
     public String getPassword() {
         return password;
+    }
+    
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return authorities;
     }
     
     @Override

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,15 +8,14 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { usePase, type PaseData } from "@/context/pase-context"
-import { SendIcon } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { SendIcon, Loader2Icon } from "lucide-react"
 import SuccessDialog from "@/components/success-dialog"
 
 export default function SolicitarPage() {
-  const { toast } = useToast()
-  const { addPase } = usePase()
+  const { addPase, loading } = usePase()
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [lastPaseId, setLastPaseId] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState<Omit<PaseData, "id" | "firma" | "sello" | "fechaCreacion" | "estado">>({
     folio: `PST-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)
@@ -71,10 +69,10 @@ export default function SolicitarPage() {
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validar campos requeridos
+    // Validate required fields
     const requiredFields = [
       "razonSocial",
       "fecha",
@@ -87,28 +85,31 @@ export default function SolicitarPage() {
     const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
 
     if (missingFields.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Error en el formulario",
-        description: `Por favor complete los siguientes campos: ${missingFields.join(", ")}`,
-      })
       return
     }
 
-    // Crear nuevo pase
-    const newPase = addPase({
-      ...formData,
-      estado: "pendiente",
-      firma: "",
-      sello: "",
-      fechaCreacion: new Date().toISOString(),
-    })
+    try {
+      setIsSubmitting(true)
 
-    // Guardar el ID del pase para mostrarlo en el diálogo
-    setLastPaseId(newPase.id)
+      // Create new pass
+      const newPase = await addPase({
+        ...formData,
+        estado: "pendiente",
+        firma: "",
+        sello: "",
+        fechaCreacion: new Date().toISOString(),
+      })
 
-    // Mostrar diálogo de éxito
-    setShowSuccessDialog(true)
+      // Save the ID for the success dialog
+      setLastPaseId(newPase.id || null)
+
+      // Show success dialog
+      setShowSuccessDialog(true)
+    } catch (error) {
+      console.error("Error creating pass:", error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleCloseSuccessDialog = () => {
@@ -155,6 +156,7 @@ export default function SolicitarPage() {
                   onChange={handleChange}
                   className="mt-1"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -169,6 +171,7 @@ export default function SolicitarPage() {
                   onChange={handleChange}
                   className="mt-1"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -188,6 +191,7 @@ export default function SolicitarPage() {
                       onChange={handleChange}
                       className="mt-1"
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div>
@@ -201,6 +205,7 @@ export default function SolicitarPage() {
                       onChange={handleChange}
                       className="mt-1"
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -217,6 +222,7 @@ export default function SolicitarPage() {
                       value={formData.remolque1Eco}
                       onChange={handleChange}
                       className="mt-1"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div>
@@ -227,6 +233,7 @@ export default function SolicitarPage() {
                       value={formData.remolque1Placa}
                       onChange={handleChange}
                       className="mt-1"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -243,6 +250,7 @@ export default function SolicitarPage() {
                       value={formData.remolque2Eco}
                       onChange={handleChange}
                       className="mt-1"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div>
@@ -253,6 +261,7 @@ export default function SolicitarPage() {
                       value={formData.remolque2Placa}
                       onChange={handleChange}
                       className="mt-1"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -273,6 +282,7 @@ export default function SolicitarPage() {
                     onChange={handleChange}
                     className="mt-1"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -286,6 +296,7 @@ export default function SolicitarPage() {
                     onChange={handleChange}
                     className="mt-1"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
                 <div>
@@ -296,6 +307,7 @@ export default function SolicitarPage() {
                     value={formData.operadorApellidoMaterno}
                     onChange={handleChange}
                     className="mt-1"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -310,6 +322,7 @@ export default function SolicitarPage() {
                   value={formData.ecoDolly}
                   onChange={handleChange}
                   className="mt-1"
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -320,6 +333,7 @@ export default function SolicitarPage() {
                   value={formData.placasDolly}
                   onChange={handleChange}
                   className="mt-1"
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -333,15 +347,30 @@ export default function SolicitarPage() {
                 onChange={handleChange}
                 className="mt-1"
                 rows={2}
+                disabled={isSubmitting}
               />
             </div>
           </form>
         </CardContent>
 
         <CardFooter className="bg-gray-50 border-t p-4 flex justify-end">
-          <Button type="submit" form="solicitud-form" className="bg-blue-700 hover:bg-blue-800 flex items-center gap-2">
-            <SendIcon className="h-4 w-4" />
-            Enviar Solicitud
+          <Button
+            type="submit"
+            form="solicitud-form"
+            className="bg-blue-700 hover:bg-blue-800 flex items-center gap-2"
+            disabled={isSubmitting || loading}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2Icon className="h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <SendIcon className="h-4 w-4" />
+                Enviar Solicitud
+              </>
+            )}
           </Button>
         </CardFooter>
       </Card>
@@ -352,7 +381,7 @@ export default function SolicitarPage() {
         </p>
       </div>
 
-      {/* Diálogo de confirmación */}
+      {/* Success Dialog */}
       {showSuccessDialog && <SuccessDialog paseId={lastPaseId} onClose={handleCloseSuccessDialog} />}
     </div>
   )

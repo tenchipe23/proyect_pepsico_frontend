@@ -107,7 +107,7 @@ public class VehicleExitPassService {
         
         // Update fields
         existingPass.setRazonSocial(passDto.getRazonSocial());
-        existingPass.setFecha(passDto.getFecha() != null ? passDto.getFecha().toLocalDate() : null);
+        existingPass.setFecha(passDto.getFecha());
         existingPass.setTractorEco(passDto.getTractorEco());
         existingPass.setTractorPlaca(passDto.getTractorPlaca());
         existingPass.setComentarios(passDto.getComentarios());

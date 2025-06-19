@@ -1,27 +1,30 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import type React from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
+import { apiClient } from "@/lib/api-client"
+import { useToast } from "@/components/ui/use-toast"
 
 export interface PaseData {
   id?: string
-  estado: "pendiente" | "firmado" | "autorizado" | "rechazado"
   folio: string
+  estado: "pendiente" | "firmado" | "autorizado" | "rechazado"
   razonSocial: string
   fecha: string
   tractorEco: string
   tractorPlaca: string
-  remolque1Eco: string
-  remolque1Placa: string
-  remolque2Eco: string
-  remolque2Placa: string
+  remolque1Eco?: string
+  remolque1Placa?: string
+  remolque2Eco?: string
+  remolque2Placa?: string
   operadorNombre: string
   operadorApellidoPaterno: string
-  operadorApellidoMaterno: string
-  ecoDolly: string
-  placasDolly: string
-  comentarios: string
-  firma: string
-  sello: string
+  operadorApellidoMaterno?: string
+  ecoDolly?: string
+  placasDolly?: string
+  comentarios?: string
+  firma?: string
+  sello?: string
   fechaCreacion: string
   fechaFirma?: string
   fechaAutorizacion?: string
@@ -29,132 +32,332 @@ export interface PaseData {
 
 interface PaseContextType {
   pases: PaseData[]
-  currentPase: PaseData | null
-  setCurrentPase: (pase: PaseData | null) => void
-  addPase: (pase: PaseData) => PaseData
-  updatePase: (id: string, pase: Partial<PaseData>) => void
-  deletePase: (id: string) => void
-  getPaseById: (id: string) => PaseData | undefined
-  searchPases: (query: string, field: keyof PaseData) => PaseData[]
-}
-
-const defaultPase: PaseData = {
-  estado: "pendiente",
-  folio: "",
-  razonSocial: "",
-  fecha: "",
-  tractorEco: "",
-  tractorPlaca: "",
-  remolque1Eco: "",
-  remolque1Placa: "",
-  remolque2Eco: "",
-  remolque2Placa: "",
-  operadorNombre: "",
-  operadorApellidoPaterno: "",
-  operadorApellidoMaterno: "",
-  ecoDolly: "",
-  placasDolly: "",
-  comentarios: "",
-  firma: "",
-  sello: "",
-  fechaCreacion: new Date().toISOString(),
+  loading: boolean
+  error: string | null
+  addPase: (pase: Omit<PaseData, "id" | "fechaCreacion">) => Promise<PaseData>
+  updatePase: (id: string, updates: Partial<PaseData>) => Promise<void>
+  deletePase: (id: string) => Promise<void>
+  getPaseById: (id: string) => Promise<PaseData | null>
+  refreshPases: () => Promise<void>
+  signPase: (id: string, signatureData: { firma: string; sello: string }) => Promise<void>
+  authorizePase: (id: string) => Promise<void>
+  rejectPase: (id: string, reason?: string) => Promise<void>
+  searchPases: (searchTerm: string, field: string) => Promise<PaseData[]>
 }
 
 const PaseContext = createContext<PaseContextType | undefined>(undefined)
 
-export function PaseProvider({ children }: { children: ReactNode }) {
+export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [pases, setPases] = useState<PaseData[]>([])
-  const [currentPase, setCurrentPase] = useState<PaseData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
-  // Cargar datos del localStorage al iniciar
-  useEffect(() => {
-    const storedPases = localStorage.getItem("pases")
-    if (storedPases) {
-      setPases(JSON.parse(storedPases))
-    }
+  const refreshPases = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-    const storedCurrentPase = localStorage.getItem("currentPase")
-    if (storedCurrentPase) {
-      setCurrentPase(JSON.parse(storedCurrentPase))
+      const response = await apiClient.getPasses(0, 100) // Get all passes
+
+      if (response.success && response.data) {
+        setPases(response.data.content || [])
+      } else {
+        setError(response.error || "Error loading passes")
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Error loading passes"
+      setError(errorMessage)
+      console.error("Error refreshing passes:", error)
+    } finally {
+      setLoading(false)
     }
   }, [])
 
-  // Guardar datos en localStorage cuando cambien
+  // Load passes on mount
   useEffect(() => {
-    localStorage.setItem("pases", JSON.stringify(pases))
-  }, [pases])
+    refreshPases()
+  }, [refreshPases])
 
-  useEffect(() => {
-    if (currentPase) {
-      localStorage.setItem("currentPase", JSON.stringify(currentPase))
-    } else {
-      localStorage.removeItem("currentPase")
-    }
-  }, [currentPase])
+  const addPase = useCallback(
+    async (paseData: Omit<PaseData, "id" | "fechaCreacion">): Promise<PaseData> => {
+      try {
+        setLoading(true)
 
-  const addPase = (pase: PaseData) => {
-    const newPase = {
-      ...pase,
-      id: require('uuid').v4(),
-      fechaCreacion: new Date().toISOString(),
-    }
-    setPases((prev) => [...prev, newPase])
-    return newPase
-  }
+        const response = await apiClient.createPass({
+          ...paseData,
+          fechaCreacion: new Date().toISOString(),
+        })
 
-  const updatePase = (id: string, updatedData: Partial<PaseData>) => {
-    setPases((prev) => prev.map((pase) => (pase.id === id ? { ...pase, ...updatedData } : pase)))
+        if (response.success && response.data) {
+          const newPase = response.data as PaseData
+          setPases((prev) => [newPase, ...prev])
 
-    // Si estamos actualizando el pase actual, también actualizamos currentPase
-    if (currentPase?.id === id) {
-      setCurrentPase((prev) => (prev ? { ...prev, ...updatedData } : null))
-    }
-  }
+          toast({
+            title: "Pase creado",
+            description: `Pase ${newPase.folio} creado exitosamente`,
+          })
 
-  const deletePase = (id: string) => {
-    setPases((prev) => prev.filter((pase) => pase.id !== id))
-
-    // Si estamos eliminando el pase actual, limpiamos currentPase
-    if (currentPase?.id === id) {
-      setCurrentPase(null)
-    }
-  }
-
-  const getPaseById = (id: string) => {
-    return pases.find((pase) => pase.id === id)
-  }
-
-  const searchPases = (query: string, field: keyof PaseData) => {
-    if (!query) return pases
-
-    return pases.filter((pase) => {
-      const value = pase[field]
-      if (typeof value === "string") {
-        return value.toLowerCase().includes(query.toLowerCase())
+          return newPase
+        } else {
+          throw new Error(response.error || "Error creating pass")
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Error creating pass"
+        setError(errorMessage)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage,
+        })
+        throw error
+      } finally {
+        setLoading(false)
       }
-      return false
-    })
+    },
+    [toast],
+  )
+
+  const updatePase = useCallback(
+    async (id: string, updates: Partial<PaseData>) => {
+      try {
+        setLoading(true)
+
+        const response = await apiClient.updatePass(id, updates)
+
+        if (response.success) {
+          setPases((prev) => prev.map((pase) => (pase.id === id ? { ...pase, ...updates } : pase)))
+
+          toast({
+            title: "Pase actualizado",
+            description: "El pase ha sido actualizado exitosamente",
+          })
+        } else {
+          throw new Error(response.error || "Error updating pass")
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Error updating pass"
+        setError(errorMessage)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage,
+        })
+        throw error
+      } finally {
+        setLoading(false)
+      }
+    },
+    [toast],
+  )
+
+  const deletePase = useCallback(
+    async (id: string) => {
+      try {
+        setLoading(true)
+
+        // Note: Implement soft delete in backend if needed
+        setPases((prev) => prev.filter((pase) => pase.id !== id))
+
+        toast({
+          title: "Pase eliminado",
+          description: "El pase ha sido eliminado exitosamente",
+        })
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Error deleting pass"
+        setError(errorMessage)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage,
+        })
+        throw error
+      } finally {
+        setLoading(false)
+      }
+    },
+    [toast],
+  )
+
+  const getPaseById = useCallback(async (id: string): Promise<PaseData | null> => {
+    try {
+      const response = await apiClient.getPassById(id)
+
+      if (response.success && response.data) {
+        return response.data as PaseData
+      } else {
+        return null
+      }
+    } catch (error) {
+      console.error("Error getting pass by ID:", error)
+      return null
+    }
+  }, [])
+
+  const signPase = useCallback(
+    async (id: string, signatureData: { firma: string; sello: string }) => {
+      try {
+        setLoading(true)
+
+        const response = await apiClient.signPass(id, signatureData)
+
+        if (response.success) {
+          setPases((prev) =>
+            prev.map((pase) =>
+              pase.id === id
+                ? {
+                    ...pase,
+                    ...signatureData,
+                    estado: "firmado" as const,
+                    fechaFirma: new Date().toISOString(),
+                  }
+                : pase,
+            ),
+          )
+
+          toast({
+            title: "Pase firmado",
+            description: "El pase ha sido firmado exitosamente",
+          })
+        } else {
+          throw new Error(response.error || "Error signing pass")
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Error signing pass"
+        setError(errorMessage)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage,
+        })
+        throw error
+      } finally {
+        setLoading(false)
+      }
+    },
+    [toast],
+  )
+
+  const authorizePase = useCallback(
+    async (id: string) => {
+      try {
+        setLoading(true)
+
+        const response = await apiClient.authorizePass(id)
+
+        if (response.success) {
+          setPases((prev) =>
+            prev.map((pase) =>
+              pase.id === id
+                ? {
+                    ...pase,
+                    estado: "autorizado" as const,
+                    fechaAutorizacion: new Date().toISOString(),
+                  }
+                : pase,
+            ),
+          )
+
+          toast({
+            title: "Pase autorizado",
+            description: "El pase ha sido autorizado exitosamente",
+          })
+        } else {
+          throw new Error(response.error || "Error authorizing pass")
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Error authorizing pass"
+        setError(errorMessage)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage,
+        })
+        throw error
+      } finally {
+        setLoading(false)
+      }
+    },
+    [toast],
+  )
+
+  const rejectPase = useCallback(
+    async (id: string, reason?: string) => {
+      try {
+        setLoading(true)
+
+        const response = await apiClient.rejectPass(id, reason)
+
+        if (response.success) {
+          setPases((prev) =>
+            prev.map((pase) =>
+              pase.id === id
+                ? {
+                    ...pase,
+                    estado: "rechazado" as const,
+                  }
+                : pase,
+            ),
+          )
+
+          toast({
+            title: "Pase rechazado",
+            description: "El pase ha sido rechazado",
+            variant: "destructive",
+          })
+        } else {
+          throw new Error(response.error || "Error rejecting pass")
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Error rejecting pass"
+        setError(errorMessage)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage,
+        })
+        throw error
+      } finally {
+        setLoading(false)
+      }
+    },
+    [toast],
+  )
+
+  const searchPases = useCallback(async (searchTerm: string, field: string): Promise<PaseData[]> => {
+    try {
+      const response = await apiClient.searchPasses(searchTerm, field)
+
+      if (response.success && response.data) {
+        return response.data.content || []
+      } else {
+        return []
+      }
+    } catch (error) {
+      console.error("Error searching passes:", error)
+      return []
+    }
+  }, [])
+
+  const value: PaseContextType = {
+    pases,
+    loading,
+    error,
+    addPase,
+    updatePase,
+    deletePase,
+    getPaseById,
+    refreshPases,
+    signPase,
+    authorizePase,
+    rejectPase,
+    searchPases,
   }
 
-  return (
-    <PaseContext.Provider
-      value={{
-        pases,
-        currentPase,
-        setCurrentPase,
-        addPase,
-        updatePase,
-        deletePase,
-        getPaseById,
-        searchPases,
-      }}
-    >
-      {children}
-    </PaseContext.Provider>
-  )
+  return <PaseContext.Provider value={value}>{children}</PaseContext.Provider>
 }
 
-export function usePase() {
+export const usePase = () => {
   const context = useContext(PaseContext)
   if (context === undefined) {
     throw new Error("usePase must be used within a PaseProvider")

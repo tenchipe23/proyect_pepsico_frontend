@@ -56,7 +56,7 @@ public class VehicleExitPassController {
     
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<VehicleExitPassDto> getPassById(@PathVariable String id) {
+    public ResponseEntity<VehicleExitPassDto> getPassById(@PathVariable Long id) {
         VehicleExitPassDto pass = passService.getPassById(id);
         return ResponseEntity.ok(pass);
     }
@@ -76,7 +76,7 @@ public class VehicleExitPassController {
     
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> updatePass(@PathVariable String id, 
+    public ResponseEntity<VehicleExitPassDto> updatePass(@PathVariable Long id, 
                                                         @Valid @RequestBody VehicleExitPassDto passDto) {
         VehicleExitPassDto updatedPass = passService.updatePass(id, passDto);
         return ResponseEntity.ok(updatedPass);
@@ -84,7 +84,7 @@ public class VehicleExitPassController {
     
     @PostMapping("/{id}/sign")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> signPass(@PathVariable String id, 
+    public ResponseEntity<VehicleExitPassDto> signPass(@PathVariable Long id, 
                                                       @RequestBody Map<String, String> signData) {
         String signature = signData.get("signature");
         String seal = signData.get("seal");
@@ -94,14 +94,14 @@ public class VehicleExitPassController {
     
     @PostMapping("/authorize/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> authorizePass(@PathVariable String id) {
+    public ResponseEntity<VehicleExitPassDto> authorizePass(@PathVariable Long id) {
         VehicleExitPassDto authorizedPass = passService.authorizePass(id);
         return ResponseEntity.ok(authorizedPass);
     }
     
     @PostMapping("/reject/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> rejectPass(@PathVariable String id, 
+    public ResponseEntity<VehicleExitPassDto> rejectPass(@PathVariable Long id, 
                                                         @RequestBody Map<String, String> rejectData) {
         String reason = rejectData.get("reason");
         VehicleExitPassDto rejectedPass = passService.rejectPass(id, reason);
@@ -110,7 +110,7 @@ public class VehicleExitPassController {
     
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deletePass(@PathVariable String id) {
+    public ResponseEntity<?> deletePass(@PathVariable Long id) {
         passService.deletePass(id);
         return ResponseEntity.ok().body("{\"message\": \"Pass deleted successfully!\"}");
     }

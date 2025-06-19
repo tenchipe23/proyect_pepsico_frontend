@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { usePase, type PaseData } from "@/context/pase-context"
+import { useAuth } from "@/context/auth-context"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,7 +20,6 @@ import {
   CalendarIcon,
   RefreshCwIcon,
 } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
 import AppHeader from "@/components/app-header"
 import AuthRedirect from "@/components/auth-redirect"
 import NotificationBadge from "@/components/notification-badge"
@@ -29,35 +29,19 @@ import { useRouter } from "next/navigation"
 import LoadingIndicator from "@/components/loading-indicator"
 
 export default function AutorizadorDashboardPage() {
-  const { pases, updatePase } = usePase()
-  const { toast } = useToast()
-  const [user, setUser] = useState<any>(null)
+  const { pases, loading, authorizePase, rejectPase, refreshPases } = usePase()
+  const { user, logout } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
   const [searchField, setSearchField] = useState<keyof PaseData>("folio")
   const [activeTab, setActiveTab] = useState("pendientes")
-  const [isLoading, setIsLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState<string | null>(null)
   const [showNotifications, setShowNotifications] = useState(false)
   const router = useRouter()
 
-  // Load user data after authentication is confirmed
+  // Refresh data on mount
   useEffect(() => {
-    try {
-      console.log("Cargando datos de usuario en el dashboard...")
-      const storedUser = localStorage.getItem("user")
-      if (storedUser) {
-        const userData = JSON.parse(storedUser)
-        console.log("Usuario cargado en dashboard:", userData.name, userData.role)
-        setUser(userData)
-      } else {
-        console.log("No se encontró usuario en localStorage")
-      }
-      setIsLoading(false)
-    } catch (error) {
-      console.error("Error loading user data:", error)
-      setIsLoading(false)
-    }
-  }, [])
+    refreshPases()
+  }, [refreshPases])
 
   // Filter passes based on search query, tab, and date filter
   const getFilteredPases = useCallback(() => {
@@ -102,9 +86,8 @@ export default function AutorizadorDashboardPage() {
 
   // Get new notifications (passes created in the last 24 hours)
   const getNewNotifications = useCallback(() => {
-    // Verificar si estamos en el cliente antes de acceder a localStorage
-    if (typeof window === 'undefined') return []
-    
+    if (typeof window === "undefined") return []
+
     const lastChecked = localStorage.getItem("lastNotificationCheck")
     if (!lastChecked) return []
 
@@ -116,55 +99,28 @@ export default function AutorizadorDashboardPage() {
   const newNotifications = getNewNotifications()
 
   const handleVerDetalle = (id: string) => {
-    // Usar window.location.href causa una recarga completa de la página
-    // window.location.href = `/autorizar/${id}`
-
-    // En su lugar, usamos router.push para una navegación del lado del cliente
     router.push(`/autorizar/${id}`)
   }
 
-  const handleQuickAction = (id: string, action: "autorizar" | "rechazar") => {
+  const handleQuickAction = async (id: string, action: "autorizar" | "rechazar") => {
     const pase = pases.find((p) => p.id === id)
 
     if (!pase) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se encontró el pase seleccionado",
-      })
       return
     }
 
     if (!pase.firma || !pase.sello) {
-      toast({
-        variant: "destructive",
-        title: "Acción no permitida",
-        description: "El pase debe tener firma y sello para ser autorizado o rechazado",
-      })
       return
     }
 
     try {
-      updatePase(id, {
-        estado: action === "autorizar" ? "firmado" : "rechazado",
-        fechaFirma: new Date().toISOString(),
-      })
-
-      toast({
-        variant: action === "autorizar" ? "success" : "destructive",
-        title: action === "autorizar" ? "Pase autorizado" : "Pase rechazado",
-        description:
-          action === "autorizar"
-            ? "El pase ha sido autorizado correctamente"
-            : "El pase ha sido rechazado correctamente",
-      })
+      if (action === "autorizar") {
+        await authorizePase(id)
+      } else {
+        await rejectPase(id)
+      }
     } catch (error) {
       console.error(`Error al ${action} pase:`, error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `No se pudo ${action} el pase. Intente nuevamente.`,
-      })
     }
   }
 
@@ -196,8 +152,8 @@ export default function AutorizadorDashboardPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("user")
-    window.location.href = "/login"
+    logout()
+    router.push("/login")
   }
 
   const handleClearFilters = () => {
@@ -208,16 +164,11 @@ export default function AutorizadorDashboardPage() {
   const handleNotificationClick = () => {
     setShowNotifications(!showNotifications)
     if (!showNotifications) {
-      // Mark notifications as read when opening
-      // Verificar si la función existe en el contexto global
-      const updateFn = (window as any).updateNotificationLastChecked
-      if (typeof updateFn === 'function') {
-        updateFn()
-      }
+      localStorage.setItem("lastNotificationCheck", new Date().toISOString())
     }
   }
 
-  if (isLoading) {
+  if (loading) {
     return (
       <AuthRedirect allowedRoles={["admin", "autorizador"]}>
         <div className="flex justify-center items-center h-[50vh]">

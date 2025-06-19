@@ -6,76 +6,41 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
 import { LockIcon, UserIcon, AlertCircleIcon, Loader2Icon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-
-// Usuarios de prueba
-const MOCK_USERS = [
-  {
-    id: "1",
-    name: "Administrador",
-    email: "admin@pepsico.com",
-    password: "admin123",
-    role: "admin",
-  },
-  {
-    id: "2",
-    name: "Autorizador",
-    email: "autorizador@pepsico.com",
-    password: "auth123",
-    role: "autorizador",
-  },
-  {
-    id: "3",
-    name: "Seguridad",
-    email: "seguridad@pepsico.com",
-    password: "seg123",
-    role: "seguridad",
-  },
-]
+import { useAuth } from "@/context/auth-context"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export default function LoginPage() {
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
+  const { login, isAuthenticated, user, loading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
-  const [redirecting, setRedirecting] = useState(false)
 
-  // Verificar si ya hay una sesión activa al cargar la página
+  // Redirect if already authenticated
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("user")
-      if (storedUser) {
-        const userData = JSON.parse(storedUser)
-        console.log("Sesión activa detectada:", userData.role)
-
-        // Redirigir según el rol
-        redirectUserByRole(userData.role)
-      }
-    } catch (error) {
-      console.error("Error al verificar sesión:", error)
-      // Limpiar localStorage si hay un error al parsear
-      localStorage.removeItem("user")
+    if (isAuthenticated && user) {
+      const redirectPath = searchParams.get("redirect") || getDefaultRedirectPath(user.role)
+      router.push(redirectPath)
     }
-  }, [])
+  }, [isAuthenticated, user, router, searchParams])
 
-  const redirectUserByRole = (role: string) => {
-    let redirectUrl = "/solicitar" // Default fallback
-
-    if (role === "admin") {
-      redirectUrl = "/admin"
-    } else if (role === "autorizador") {
-      redirectUrl = "/autorizar/dashboard"
-    } else if (role === "seguridad") {
-      redirectUrl = "/seguridad"
+  const getDefaultRedirectPath = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "/admin"
+      case "autorizador":
+        return "/autorizar/dashboard"
+      case "seguridad":
+        return "/seguridad"
+      default:
+        return "/solicitar"
     }
-
-    console.log("Redirigiendo a:", redirectUrl)
-    window.location.href = redirectUrl
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,75 +49,44 @@ export default function LoginPage() {
       ...prev,
       [name]: value,
     }))
-    // Limpiar error al cambiar los datos del formulario
     if (error) setError(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+
+    if (!formData.email || !formData.password) {
+      setError("Por favor ingrese su correo electrónico y contraseña")
+      return
+    }
 
     try {
-      // Validate that credentials were entered
-      if (!formData.email || !formData.password) {
-        setError("Por favor ingrese su correo electrónico y contraseña")
-        setIsLoading(false)
-        return
-      }
+      setIsLoggingIn(true)
+      setError(null)
 
-      console.log("Intentando iniciar sesión con:", formData.email)
+      const result = await login(formData.email, formData.password)
 
-      // Find user
-      const foundUser = MOCK_USERS.find(
-        (u) => u.email.toLowerCase() === formData.email.toLowerCase() && u.password === formData.password,
-      )
-
-      if (foundUser) {
-        // Create user object without password
-        const userToStore = {
-          id: foundUser.id,
-          name: foundUser.name,
-          email: foundUser.email,
-          role: foundUser.role,
-        }
-
-        console.log("Usuario encontrado:", userToStore)
-
-        // Save to localStorage
-        try {
-          localStorage.setItem("user", JSON.stringify(userToStore))
-          console.log("Usuario guardado en localStorage")
-        } catch (storageError) {
-          console.error("Error al guardar en localStorage:", storageError)
-          setError("Error al guardar la sesión. Verifique la configuración de su navegador.")
-          setIsLoading(false)
-          return
-        }
-
-        toast({
-          variant: "success",
-          title: "Inicio de sesión exitoso",
-          description: `Bienvenido, ${userToStore.name}. Redirigiendo...`,
-        })
-
-        // Indicate we're redirecting
-        setRedirecting(true)
-
-        // Redirect based on role
-        setTimeout(() => {
-          redirectUserByRole(foundUser.role)
-        }, 1000)
+      if (result.success) {
+        // Redirect will be handled by useEffect
       } else {
-        console.log("Credenciales inválidas")
-        setError("Correo electrónico o contraseña incorrectos")
-        setIsLoading(false)
+        setError(result.error || "Error de inicio de sesión")
       }
     } catch (error) {
-      console.error("Error en el proceso de login:", error)
-      setError("Ocurrió un error inesperado. Por favor intente nuevamente.")
-      setIsLoading(false)
+      setError("Error de conexión. Intente nuevamente.")
+    } finally {
+      setIsLoggingIn(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <div className="text-center">
+          <Loader2Icon className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Cargando...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -191,7 +125,7 @@ export default function LoginPage() {
                     onChange={handleChange}
                     className="pl-10"
                     required
-                    disabled={isLoading || redirecting}
+                    disabled={isLoggingIn}
                   />
                 </div>
               </div>
@@ -208,7 +142,7 @@ export default function LoginPage() {
                     onChange={handleChange}
                     className="pl-10"
                     required
-                    disabled={isLoading || redirecting}
+                    disabled={isLoggingIn}
                   />
                 </div>
               </div>
@@ -219,13 +153,13 @@ export default function LoginPage() {
             <p>Credenciales de prueba:</p>
             <ul className="list-disc pl-5 mt-1 space-y-1">
               <li>
-                <strong>Autorizador:</strong> autorizador@pepsico.com / auth123
+                <strong>Admin:</strong> admin@pepsico.com / password123
               </li>
               <li>
-                <strong>Admin:</strong> admin@pepsico.com / admin123
+                <strong>Autorizador:</strong> autorizador@pepsico.com / password123
               </li>
               <li>
-                <strong>Seguridad:</strong> seguridad@pepsico.com / seg123
+                <strong>Seguridad:</strong> seguridad@pepsico.com / password123
               </li>
             </ul>
           </div>
@@ -235,14 +169,9 @@ export default function LoginPage() {
             type="submit"
             form="login-form"
             className="w-full bg-blue-700 hover:bg-blue-800 flex items-center justify-center gap-2"
-            disabled={isLoading || redirecting}
+            disabled={isLoggingIn}
           >
-            {redirecting ? (
-              <>
-                <Loader2Icon className="h-4 w-4 animate-spin" />
-                Redirigiendo...
-              </>
-            ) : isLoading ? (
+            {isLoggingIn ? (
               <>
                 <Loader2Icon className="h-4 w-4 animate-spin" />
                 Iniciando sesión...

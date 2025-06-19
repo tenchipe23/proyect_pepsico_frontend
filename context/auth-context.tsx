@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
-import { createContext, useState, useEffect, useContext } from "react"
-import { apiClient } from "@/lib/api"
+import { createContext, useState, useEffect, useContext, useCallback } from "react"
+import { apiClient } from "@/lib/api-client"
+import { useToast } from "@/components/ui/use-toast"
 
 interface User {
   id: number
@@ -16,6 +17,9 @@ interface AuthContextProps {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   loading: boolean
+  isAuthenticated: boolean
+  hasRole: (roles: string[]) => boolean
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -23,68 +27,129 @@ const AuthContext = createContext<AuthContextProps>({
   login: async () => ({ success: false }),
   logout: () => {},
   loading: false,
+  isAuthenticated: false,
+  hasRole: () => false,
+  refreshUser: async () => {},
 })
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
+  // Initialize user from localStorage on mount
   useEffect(() => {
-    const token = localStorage.getItem("token")
-    const storedUser = localStorage.getItem("user")
-
-    if (token && storedUser) {
+    const initializeAuth = () => {
       try {
-        setUser(JSON.parse(storedUser))
+        const token = localStorage.getItem("token")
+        const storedUser = localStorage.getItem("user")
+
+        if (token && storedUser) {
+          const userData = JSON.parse(storedUser)
+          setUser(userData)
+        }
       } catch (error) {
-        console.error("Error parsing user from localStorage:", error)
+        console.error("Error initializing auth:", error)
         localStorage.removeItem("token")
         localStorage.removeItem("user")
+      } finally {
+        setLoading(false)
       }
     }
+
+    initializeAuth()
   }, [])
 
-  const login = async (email: string, password: string) => {
-    try {
-      setLoading(true)
-      const response = await apiClient.login(email, password)
+  const login = useCallback(
+    async (email: string, password: string) => {
+      try {
+        setLoading(true)
+        const response = await apiClient.login(email, password)
 
-      const userData = {
-        id: response.id,
-        name: response.nombre + " " + response.apellido,
-        email: response.email,
-        role: response.rol.toLowerCase(),
+        if (response.success && response.data) {
+          const userData: User = {
+            id: response.data.id,
+            name: `${response.data.nombre} ${response.data.apellido}`,
+            email: response.data.email,
+            role: response.data.rol.toLowerCase(),
+          }
+
+          setUser(userData)
+          localStorage.setItem("token", response.data.token)
+          localStorage.setItem("user", JSON.stringify(userData))
+
+          toast({
+            title: "Inicio de sesión exitoso",
+            description: `Bienvenido, ${userData.name}`,
+          })
+
+          return { success: true }
+        } else {
+          return {
+            success: false,
+            error: response.error || "Credenciales inválidas",
+          }
+        }
+      } catch (error) {
+        console.error("Login error:", error)
+        return {
+          success: false,
+          error: "Error de conexión. Intente nuevamente.",
+        }
+      } finally {
+        setLoading(false)
       }
+    },
+    [toast],
+  )
 
-      setUser(userData)
-      localStorage.setItem("token", response.token)
-      localStorage.setItem("user", JSON.stringify(userData))
-
-      return { success: true }
+  const logout = useCallback(async () => {
+    try {
+      await apiClient.logout()
     } catch (error) {
-      console.error("Login error:", error)
-      return { success: false, error: "Credenciales inválidas" }
+      console.error("Logout error:", error)
     } finally {
-      setLoading(false)
-    }
-  }
+      setUser(null)
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-  }
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión correctamente",
+      })
+    }
+  }, [toast])
+
+  const refreshUser = useCallback(async () => {
+    // Implementation for refreshing user data if needed
+    // This could fetch updated user info from the backend
+  }, [])
+
+  const hasRole = useCallback(
+    (roles: string[]) => {
+      if (!user) return false
+      return roles.includes(user.role)
+    },
+    [user],
+  )
 
   const value: AuthContextProps = {
     user,
     login,
     logout,
     loading,
+    isAuthenticated: !!user,
+    hasRole,
+    refreshUser,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {
-  return useContext(AuthContext)
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
 }
