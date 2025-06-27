@@ -1,12 +1,16 @@
 package com.pepsico.vehicleexitpass.dto;
 
 import com.pepsico.vehicleexitpass.entity.PassStatus;
+import com.pepsico.vehicleexitpass.entity.PaseVehiculo;
+import com.pepsico.vehicleexitpass.entity.Bitacora;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.UUID;
 
 public class VehicleExitPassDto {
-    private String id;
+    private UUID id; // Cambia de String a UUID o elimina si no es necesario en el DTO de creación
     private String folio;
     private PassStatus estado;
     private String razonSocial;
@@ -20,13 +24,15 @@ public class VehicleExitPassDto {
     private LocalDateTime fechaFirma;
     private LocalDateTime fechaAutorizacion;
     private UserDto operador;
-    
+    private Set<PaseVehiculo> paseVehiculos;
+    private Set<Bitacora> bitacoras;
+
     // Constructors
     public VehicleExitPassDto() {}
     
     // Getters and Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
     
     public String getFolio() { return folio; }
     public void setFolio(String folio) { this.folio = folio; }
@@ -66,4 +72,10 @@ public class VehicleExitPassDto {
     
     public UserDto getOperador() { return operador; }
     public void setOperador(UserDto operador) { this.operador = operador; }
+    
+    public Set<PaseVehiculo> getPaseVehiculos() { return paseVehiculos; }
+    public void setPaseVehiculos(Set<PaseVehiculo> paseVehiculos) { this.paseVehiculos = paseVehiculos; }
+    
+    public Set<Bitacora> getBitacoras() { return bitacoras; }
+    public void setBitacoras(Set<Bitacora> bitacoras) { this.bitacoras = bitacoras; }
 }

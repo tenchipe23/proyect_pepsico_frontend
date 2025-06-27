@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { usePase } from "@/context/pase-context"
+import type { PaseData } from "@/context/pase-context"
 import SignaturePad from "@/components/signature-pad"
 import SealUpload from "@/components/seal-upload"
 import PdfExport from "@/components/pdf-export"
@@ -22,15 +23,14 @@ import LoadingIndicator from "@/components/loading-indicator"
 import NavigationGuard from "@/components/navigation-guard"
 
 export default function AutorizarPage({ params }: { params: { id: string } }) {
-  // Get the id from params
-  const { id } = params
+  const id = params.id
   const { getPaseById, updatePase } = usePase()
   const { toast } = useToast()
   const formRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>
   const [activeSection, setActiveSection] = useState<"firma" | "sello" | null>(null)
-  const [pase, setPase] = useState<ReturnType<typeof getPaseById>>(undefined)
+  const [pase, setPase] = useState<PaseData | undefined>(undefined)
   const [isEditing, setIsEditing] = useState(false)
-  const [editFormData, setEditFormData] = useState<Partial<any>>({})
+  const [editFormData, setEditFormData] = useState<Partial<PaseData>>({})
   const [user, setUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -157,7 +157,7 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
       setActiveSection(null)
 
       toast({
-        variant: "success",
+        variant: "default",
         title: "Firma guardada",
         description: "La firma ha sido guardada correctamente",
       })
@@ -180,7 +180,7 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
       setActiveSection(null)
 
       toast({
-        variant: "success",
+        variant: "default",
         title: "Sello guardado",
         description: "El sello ha sido guardado correctamente",
       })
@@ -206,18 +206,18 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
 
     try {
       updatePase(pase.id!, {
-        estado: approve ? "firmado" : "rechazado",
+        estado: approve ? "FIRMADO" : "RECHAZADO",
         fechaFirma: new Date().toISOString(),
       })
 
       setPase({
         ...pase,
-        estado: approve ? "firmado" : "rechazado",
+        estado: approve ? "FIRMADO" : "RECHAZADO",
         fechaFirma: new Date().toISOString(),
       })
 
       toast({
-        variant: approve ? "success" : "destructive",
+        variant: "default", // Cambia "success" por "default"
         title: approve ? "Pase autorizado" : "Pase rechazado",
         description: approve
           ? "El pase ha sido firmado y sellado correctamente"
@@ -255,7 +255,7 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
       setIsEditing(false)
 
       toast({
-        variant: "success",
+        variant: "default",
         title: "Cambios guardados",
         description: "Los datos del pase han sido actualizados correctamente",
       })
@@ -328,29 +328,29 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
                 <div className="text-right flex flex-col items-end gap-1">
                   <Badge
                     variant={
-                      pase.estado === "pendiente"
+                      pase.estado === "PENDIENTE"
                         ? "outline"
-                        : pase.estado === "firmado"
+                        : pase.estado === "FIRMADO"
                           ? "default"
-                          : pase.estado === "autorizado"
-                            ? "success"
+                          : pase.estado === "AUTORIZADO"
+                            ? "default"
                             : "destructive"
                     }
                     className={
-                      pase.estado === "pendiente"
+                      pase.estado === "PENDIENTE"
                         ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                        : pase.estado === "firmado"
+                        : pase.estado === "FIRMADO"
                           ? "bg-blue-600"
-                          : pase.estado === "rechazado"
+                          : pase.estado === "RECHAZADO"
                             ? "bg-red-600"
                             : ""
                     }
                   >
-                    {pase.estado === "pendiente"
+                    {pase.estado === "PENDIENTE"
                       ? "Pendiente"
-                      : pase.estado === "firmado"
+                      : pase.estado === "FIRMADO"
                         ? "Firmado"
-                        : pase.estado === "autorizado"
+                        : pase.estado === "AUTORIZADO"
                           ? "Autorizado"
                           : "Rechazado"}
                   </Badge>
@@ -745,7 +745,7 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
               </CardContent>
             </div>
 
-            {canAuthorize && pase.estado === "pendiente" && !isEditing && (
+            {canAuthorize && pase.estado === "PENDIENTE" && !isEditing && (
               <CardFooter className="bg-gray-50 border-t p-4 flex justify-end gap-2">
                 <Button
                   onClick={() => handleAutorizar(false)}

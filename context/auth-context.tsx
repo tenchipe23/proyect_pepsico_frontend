@@ -5,6 +5,8 @@ import { createContext, useState, useEffect, useContext, useCallback } from "rea
 import { apiClient } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 
+export let UserRole: string | null = null
+
 interface User {
   id: number
   name: string
@@ -14,7 +16,7 @@ interface User {
 
 interface AuthContextProps {
   user: User | null
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>
   logout: () => void
   loading: boolean
   isAuthenticated: boolean
@@ -24,7 +26,7 @@ interface AuthContextProps {
 
 const AuthContext = createContext<AuthContextProps>({
   user: null,
-  login: async () => ({ success: false }),
+  login: async () => ({ success: false, error: "Error de inicio de sesión", user: undefined}),
   logout: () => {},
   loading: false,
   isAuthenticated: false,
@@ -35,46 +37,65 @@ const AuthContext = createContext<AuthContextProps>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const { toast } = useToast()
 
-  // Initialize user from localStorage on mount
-  useEffect(() => {
-    const initializeAuth = () => {
-      try {
-        const token = localStorage.getItem("token")
-        const storedUser = localStorage.getItem("user")
+  // Initialize auth state from localStorage
+  const initializeAuth = useCallback(() => {
+    const token = localStorage.getItem("token")
+    const userData = localStorage.getItem("user")
 
-        if (token && storedUser) {
-          const userData = JSON.parse(storedUser)
-          setUser(userData)
-        }
+    if (token && userData) {
+      try {
+        const parsedUser = JSON.parse(userData)
+        setUser(parsedUser)
+        setIsAuthenticated(true)
       } catch (error) {
-        console.error("Error initializing auth:", error)
+        console.error("Error parsing user data:", error)
         localStorage.removeItem("token")
         localStorage.removeItem("user")
-      } finally {
-        setLoading(false)
       }
     }
-
-    initializeAuth()
+    setLoading(false)
   }, [])
+
+  useEffect(() => {
+    initializeAuth()
+  }, [initializeAuth])
 
   const login = useCallback(
     async (email: string, password: string) => {
       try {
         setLoading(true)
         const response = await apiClient.login(email, password)
+        console.log("Login response:", response)
 
         if (response.success && response.data) {
+          console.log("User data:", response.data)
+          // Asegurarse de que el rol esté en minúsculas y sin espacios
+          const userRole = response.data.role?.toLowerCase().trim()
+          UserRole = userRole
+          console.log("User role:", userRole)
+
+          if (!userRole) {
+            console.error("No role found in response:", response)
+            throw new Error("No se pudo determinar el rol del usuario")
+          }
+          
+          
           const userData: User = {
             id: response.data.id,
             name: `${response.data.nombre} ${response.data.apellido}`,
             email: response.data.email,
-            role: response.data.rol.toLowerCase(),
+            role: userRole
           }
+          console.log("User data:", userData)
 
+          // Actualizar el estado de autenticación
           setUser(userData)
+          setIsAuthenticated(true)
+          
+          // Guardar en localStorage
           localStorage.setItem("token", response.data.token)
           localStorage.setItem("user", JSON.stringify(userData))
 
@@ -83,8 +104,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             description: `Bienvenido, ${userData.name}`,
           })
 
-          return { success: true }
+          return { 
+            success: true,
+            user: userData,
+            userRole: userRole
+          }
         } else {
+          // Limpiar datos de autenticación en caso de error
+          localStorage.removeItem("token")
+          localStorage.removeItem("user")
+          setUser(null)
+          setIsAuthenticated(false)
+          
           return {
             success: false,
             error: response.error || "Credenciales inválidas",
@@ -92,15 +123,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error("Login error:", error)
+        // Limpiar datos de autenticación en caso de error
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        setUser(null)
+        setIsAuthenticated(false)
+        
         return {
           success: false,
-          error: "Error de conexión. Intente nuevamente.",
+          error: error instanceof Error ? error.message : "Error de conexión. Intente nuevamente.",
         }
       } finally {
-        setLoading(false)
+        setLoading(false)     
       }
     },
-    [toast],
+    [toast]
   )
 
   const logout = useCallback(async () => {
@@ -110,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Logout error:", error)
     } finally {
       setUser(null)
+      setIsAuthenticated(false)
       localStorage.removeItem("token")
       localStorage.removeItem("user")
 
@@ -128,7 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hasRole = useCallback(
     (roles: string[]) => {
       if (!user) return false
-      return roles.includes(user.role)
+      return roles.includes(user.role || '')
     },
     [user],
   )
@@ -138,7 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     loading,
-    isAuthenticated: !!user,
+    isAuthenticated,
     hasRole,
     refreshUser,
   }

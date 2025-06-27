@@ -11,9 +11,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface VehicleExitPassRepository extends JpaRepository<VehicleExitPass, String> {
+public interface VehicleExitPassRepository extends JpaRepository<VehicleExitPass, UUID> {
     
     Optional<VehicleExitPass> findByFolio(String folio);
     
@@ -41,4 +42,15 @@ public interface VehicleExitPassRepository extends JpaRepository<VehicleExitPass
     Page<VehicleExitPass> findByEstadoWithSearch(@Param("estado") PassStatus estado, 
                                                 @Param("search") String search, 
                                                 Pageable pageable);
+                                                
+    @Query("SELECT p FROM VehicleExitPass p WHERE " +
+           "LOWER(p.tractorPlaca) LIKE LOWER(CONCAT('%', :tractorPlaca, '%')) OR " +
+           "LOWER(p.operador.nombre) LIKE LOWER(CONCAT('%', :nombreOperador, '%')) OR " +
+           "LOWER(p.comentarios) LIKE LOWER(CONCAT('%', :comentarios, '%'))")
+           
+    Page<VehicleExitPass> buscarPorTractorPlacaONombreOperadorOComentarios(
+        @Param("tractorPlaca") String tractorPlaca,
+        @Param("nombreOperador") String nombreOperador,
+        @Param("comentarios") String comentarios,
+        Pageable pageable);
 }

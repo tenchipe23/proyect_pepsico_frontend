@@ -1,9 +1,13 @@
 package com.pepsico.vehicleexitpass.dto;
 
 import com.pepsico.vehicleexitpass.entity.TipoVehiculo;
+import com.pepsico.vehicleexitpass.entity.PaseVehiculo;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
+import java.util.Set;
 
 public class VehiculoDto {
     
@@ -25,6 +29,8 @@ public class VehiculoDto {
     
     private Boolean estado;
     
+    private Set<PaseVehiculo> paseVehiculos;
+
     // Constructors
     public VehiculoDto() {}
     
@@ -55,4 +61,7 @@ public class VehiculoDto {
     
     public Boolean getEstado() { return estado; }
     public void setEstado(Boolean estado) { this.estado = estado; }
+    
+    public Set<PaseVehiculo> getPaseVehiculos() { return paseVehiculos; }
+    public void setPaseVehiculos(Set<PaseVehiculo> paseVehiculos) { this.paseVehiculos = paseVehiculos; }
 }

@@ -8,7 +8,7 @@ interface User {
   name: string
   email: string
   password: string
-  role: UserRole
+  role: typeof UserRole
 }
 
 // Usuarios de prueba iniciales
@@ -18,21 +18,21 @@ const INITIAL_USERS = [
     name: "Administrador",
     email: "admin@pepsico.com",
     password: "admin123",
-    role: "admin" as UserRole,
+    role: "admin" as typeof UserRole,
   },
   {
     id: "2",
     name: "Autorizador",
     email: "autorizador@pepsico.com",
     password: "auth123",
-    role: "autorizador" as UserRole,
+    role: "autorizador" as typeof UserRole,
   },
   {
     id: "3",
     name: "Seguridad",
     email: "seguridad@pepsico.com",
     password: "seg123",
-    role: "seguridad" as UserRole,
+    role: "seguridad" as typeof UserRole,
   },
 ]
 

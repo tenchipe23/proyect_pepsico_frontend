@@ -26,7 +26,7 @@ export default function UserManagement() {
     name: string;
     email: string;
     password: string;
-    role: UserRole;
+    role: typeof UserRole;
   }>({
     name: "",
     email: "",
@@ -52,7 +52,7 @@ export default function UserManagement() {
   const handleRoleChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
-      role: (value as UserRole) || 'autorizador',
+      role: (value as typeof UserRole) || 'autorizador',
     }))
   }
 
@@ -75,7 +75,7 @@ export default function UserManagement() {
     })
 
     toast({
-      variant: "success",
+      variant: "default",
       title: "Usuario agregado",
       description: "El usuario ha sido agregado correctamente",
     })
@@ -102,7 +102,7 @@ export default function UserManagement() {
     })
 
     toast({
-      variant: "success",
+      variant: "default",
       title: "Usuario actualizado",
       description: "El usuario ha sido actualizado correctamente",
     })
@@ -117,7 +117,7 @@ export default function UserManagement() {
     deleteUser(currentUser.id)
 
     toast({
-      variant: "success",
+      variant: "default",
       title: "Usuario eliminado",
       description: "El usuario ha sido eliminado correctamente",
     })

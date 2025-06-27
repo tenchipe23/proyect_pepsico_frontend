@@ -1,132 +1,113 @@
 package com.pepsico.vehicleexitpass.controller;
 
 import com.pepsico.vehicleexitpass.dto.VehicleExitPassDto;
-import com.pepsico.vehicleexitpass.entity.PassStatus;
 import com.pepsico.vehicleexitpass.service.VehicleExitPassService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/passes")
+@RequestMapping("/vehicle-exit-passes")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class VehicleExitPassController {
     
+    private final VehicleExitPassService passService;
+
     @Autowired
-    private VehicleExitPassService passService;
-    
+    public VehicleExitPassController(VehicleExitPassService passService) {
+        this.passService = passService;
+    }
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<Page<VehicleExitPassDto>> getAllPasses(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "fechaCreacion") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) PassStatus status) {
-        
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<VehicleExitPassDto> passes;
-        
-        if (status != null && search != null && !search.isEmpty()) {
-            passes = passService.searchPassesByStatus(status, search, pageable);
-        } else if (status != null) {
-            passes = passService.getPassesByStatus(status, pageable);
-        } else if (search != null && !search.isEmpty()) {
-            passes = passService.searchPasses(search, pageable);
-        } else {
-            passes = passService.getAllPasses(pageable);
-        }
-        
-        return ResponseEntity.ok(passes);
+    public ResponseEntity<List<VehicleExitPassDto>> getAllPasses() {
+        return ResponseEntity.ok(passService.getAllPasses());
     }
-    
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
+    public ResponseEntity<Page<VehicleExitPassDto>> getAllPasses(Pageable pageable) {
+        return ResponseEntity.ok(passService.getAllPasses(pageable));
+    }
+
+    @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
+    public ResponseEntity<Page<VehicleExitPassDto>> getPassesByStatus(
+            @PathVariable String status, 
+            Pageable pageable) {
+        return ResponseEntity.ok(passService.getPassesByStatus(status, pageable));
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
+    public ResponseEntity<Page<VehicleExitPassDto>> searchPasses(
+            @RequestParam String search, 
+            Pageable pageable) {
+        return ResponseEntity.ok(passService.searchPasses(search, pageable));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<VehicleExitPassDto> getPassById(@PathVariable Long id) {
-        VehicleExitPassDto pass = passService.getPassById(id);
-        return ResponseEntity.ok(pass);
+    public ResponseEntity<VehicleExitPassDto> getPassById(@PathVariable String id) {
+        return ResponseEntity.ok(passService.getPassById(id));
     }
-    
+
     @GetMapping("/folio/{folio}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
     public ResponseEntity<VehicleExitPassDto> getPassByFolio(@PathVariable String folio) {
-        VehicleExitPassDto pass = passService.getPassByFolio(folio);
-        return ResponseEntity.ok(pass);
+        return ResponseEntity.ok(passService.getPassByFolio(folio));
     }
-    
-    @PostMapping("/create")
+
+    @PostMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<VehicleExitPassDto> createPass(@Valid @RequestBody VehicleExitPassDto passDto) {
-        VehicleExitPassDto createdPass = passService.createPass(passDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdPass);
+        return ResponseEntity.ok(passService.createPass(passDto));
     }
-    
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> updatePass(@PathVariable Long id, 
-                                                        @Valid @RequestBody VehicleExitPassDto passDto) {
-        VehicleExitPassDto updatedPass = passService.updatePass(id, passDto);
-        return ResponseEntity.ok(updatedPass);
+    public ResponseEntity<VehicleExitPassDto> updatePass(
+            @PathVariable String id, 
+            @Valid @RequestBody VehicleExitPassDto passDto) {
+        return ResponseEntity.ok(passService.updatePass(id, passDto));
     }
-    
+
     @PostMapping("/{id}/sign")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> signPass(@PathVariable Long id, 
-                                                      @RequestBody Map<String, String> signData) {
+    public ResponseEntity<VehicleExitPassDto> signPass(
+            @PathVariable String id, 
+            @RequestBody Map<String, String> signData) {
         String signature = signData.get("signature");
         String seal = signData.get("seal");
-        VehicleExitPassDto signedPass = passService.signPass(id, signature, seal);
-        return ResponseEntity.ok(signedPass);
+        return ResponseEntity.ok(passService.signPass(id, signature, seal));
     }
-    
-    @PostMapping("/authorize/{id}")
+
+    @PostMapping("/{id}/authorize")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> authorizePass(@PathVariable Long id) {
-        VehicleExitPassDto authorizedPass = passService.authorizePass(id);
-        return ResponseEntity.ok(authorizedPass);
+    public ResponseEntity<VehicleExitPassDto> authorizePass(@PathVariable String id) {
+        return ResponseEntity.ok(passService.authorizePass(id));
     }
-    
-    @PostMapping("/reject/{id}")
+
+    @PostMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> rejectPass(@PathVariable Long id, 
-                                                        @RequestBody Map<String, String> rejectData) {
+    public ResponseEntity<VehicleExitPassDto> rejectPass(
+            @PathVariable String id, 
+            @RequestBody Map<String, String> rejectData) {
         String reason = rejectData.get("reason");
-        VehicleExitPassDto rejectedPass = passService.rejectPass(id, reason);
-        return ResponseEntity.ok(rejectedPass);
+        return ResponseEntity.ok(passService.rejectPass(id, reason));
     }
-    
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deletePass(@PathVariable Long id) {
+    public ResponseEntity<?> deletePass(@PathVariable String id) {
         passService.deletePass(id);
         return ResponseEntity.ok().body("{\"message\": \"Pass deleted successfully!\"}");
-    }
-    
-    @GetMapping("/stats/count-by-status/{status}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<Long> getPassCountByStatus(@PathVariable PassStatus status) {
-        long count = passService.getPassCountByStatus(status);
-        return ResponseEntity.ok(count);
-    }
-    
-    @GetMapping("/stats/count-created-today")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<Long> getPassCountCreatedToday() {
-        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-        long count = passService.getPassCountCreatedSince(startOfDay);
-        return ResponseEntity.ok(count);
     }
 }

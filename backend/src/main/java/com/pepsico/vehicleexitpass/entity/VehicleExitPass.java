@@ -4,24 +4,25 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.GenericGenerator;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 
 @Entity
 @Table(name = "pases")
 @EntityListeners(AuditingEntityListener.class)
 public class VehicleExitPass {
-    
     @Id
-    @Column(name = "id", columnDefinition = "VARCHAR(36)")
-    private String id;
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
     
     @NotBlank
     @Size(max = 50)
@@ -83,12 +84,12 @@ public class VehicleExitPass {
     
     // Constructors
     public VehicleExitPass() {
-        this.id = UUID.randomUUID().toString();
+        // Constructor vacío para JPA
     }
     
     // Getters and Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
     
     public String getFolio() { return folio; }
     public void setFolio(String folio) { this.folio = folio; }

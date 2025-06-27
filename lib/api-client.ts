@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"
 
 interface ApiResponse<T> {
   data?: T
@@ -73,7 +73,7 @@ class ApiClient {
       nombre: string
       apellido: string
       email: string
-      rol: string
+      role: string
     }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
@@ -130,42 +130,42 @@ class ApiClient {
       totalPages: number
       number: number
       size: number
-    }>(`/passes?${params}`)
+    }>(`/vehicle-exit-passes/paginated?${params}`)
   }
 
   async getPassById(id: string) {
-    return this.request(`/passes/${id}`)
+    return this.request(`/vehicle-exit-passes/${id}`)
   }
 
   async createPass(passData: any) {
-    return this.request("/passes", {
+    return this.request("/vehicle-exit-passes", {
       method: "POST",
       body: JSON.stringify(passData),
     })
   }
 
   async updatePass(id: string, passData: any) {
-    return this.request(`/passes/${id}`, {
+    return this.request(`/vehicle-exit-passes/${id}`, {
       method: "PUT",
       body: JSON.stringify(passData),
     })
   }
 
   async signPass(id: string, signatureData: { firma: string; sello: string }) {
-    return this.request(`/passes/${id}/sign`, {
+    return this.request(`/vehicle-exit-passes/${id}/sign`, {
       method: "PUT",
       body: JSON.stringify(signatureData),
     })
   }
 
   async authorizePass(id: string) {
-    return this.request(`/passes/${id}/authorize`, {
+    return this.request(`/vehicle-exit-passes/${id}/authorize`, {
       method: "PUT",
     })
   }
 
   async rejectPass(id: string, reason?: string) {
-    return this.request(`/passes/${id}/reject`, {
+    return this.request(`/vehicle-exit-passes/${id}/reject`, {
       method: "PUT",
       body: JSON.stringify({ reason }),
     })
@@ -178,7 +178,7 @@ class ApiClient {
       page: page.toString(),
       size: size.toString(),
     })
-    return this.request(`/passes/search?${params}`)
+    return this.request<{ content: any[] }>(`/vehicle-exit-passes/search?${params}`)
   }
 
   // Vehicle management endpoints
@@ -213,7 +213,7 @@ class ApiClient {
       pendingPasses: number
       authorizedPasses: number
       rejectedPasses: number
-    }>("/passes/statistics")
+    }>("/vehicle-exit-passes/statistics")
   }
 
   async getUserStatistics() {

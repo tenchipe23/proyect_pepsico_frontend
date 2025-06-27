@@ -17,6 +17,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -53,20 +55,21 @@ public class SecurityConfig {
     }
     
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
         http
-            .cors(cors -> cors.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource)) // Habilita CORS usando tu configuración
             .csrf(csrf -> csrf.disable())
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/passes/create").permitAll() // Allow anonymous pass creation
+                .requestMatchers(HttpMethod.POST, "/vehicle-exit-passes").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/passes/authorize/**").hasAnyRole("ADMIN", "AUTORIZADOR")
-                .requestMatchers("/passes/security/**").hasAnyRole("ADMIN", "SEGURIDAD")
+                .requestMatchers("/vehicle-exit-passes/authorize/**").hasAnyRole("ADMIN", "AUTORIZADOR")
+                .requestMatchers("/vehicle-exit-passes/security/**").hasAnyRole("ADMIN", "SEGURIDAD")
                 .anyRequest().authenticated()
             );
         

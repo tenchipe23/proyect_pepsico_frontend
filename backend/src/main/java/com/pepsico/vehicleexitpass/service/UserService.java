@@ -20,43 +20,53 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class UserService {
-    
+
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
+
     @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private UserMapper userMapper;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    
+    public UserService(UserRepository userRepository, 
+                      UserMapper userMapper,
+                      PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
+    }
+
     public List<UserDto> getAllUsers() {
         return userRepository.findByEstadoTrue().stream()
             .map(userMapper::toDto)
             .collect(Collectors.toList());
     }
-    
+
     public Page<UserDto> getAllUsers(Pageable pageable) {
         return userRepository.findByEstadoTrue(pageable)
             .map(userMapper::toDto);
     }
-    
+
     public Page<UserDto> searchUsers(String search, Pageable pageable) {
         return userRepository.findActiveUsersWithSearch(search, pageable)
             .map(userMapper::toDto);
     }
-    
+
     public UserDto getUserById(String id) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         return userMapper.toDto(user);
     }
-    
+
+    public UserDto getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        return userMapper.toDto(user);
+    }
+
     public UserDto createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email is already in use!");
         }
-        
+
         User user = new User();
         user.setNombre(request.getName());
         user.setApellido(request.getApellido() != null ? request.getApellido() : "");
@@ -64,45 +74,45 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRol(request.getRole());
         user.setEstado(true);
-        
+
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
     }
-    
+
     public UserDto updateUser(String id, UserDto userDto) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        
+
         // Check if email is being changed and if it's already in use
         if (!user.getEmail().equals(userDto.getEmail()) && 
             userRepository.existsByEmail(userDto.getEmail())) {
             throw new RuntimeException("Email is already in use!");
         }
-        
+
         user.setNombre(userDto.getNombre());
         user.setApellido(userDto.getApellido());
         user.setEmail(userDto.getEmail());
         user.setRol(userDto.getRol());
-        
+
         User updatedUser = userRepository.save(user);
         return userMapper.toDto(updatedUser);
     }
-    
+
     public void deleteUser(String id) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        
+
         // Soft delete
         user.setEstado(false);
         userRepository.save(user);
     }
-    
+
     public List<UserDto> getUsersByRole(UserRole role) {
         return userRepository.findByRol(role).stream()
             .map(userMapper::toDto)
             .collect(Collectors.toList());
     }
-    
+
     public long getUserCountByRole(UserRole role) {
         return userRepository.countByRolAndEstadoTrue(role);
     }

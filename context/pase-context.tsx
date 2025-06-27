@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast"
 export interface PaseData {
   id?: string
   folio: string
-  estado: "pendiente" | "firmado" | "autorizado" | "rechazado"
+  estado: "PENDIENTE" | "FIRMADO" | "AUTORIZADO" | "RECHAZADO"
   razonSocial: string
   fecha: string
   tractorEco: string
@@ -37,7 +37,7 @@ interface PaseContextType {
   addPase: (pase: Omit<PaseData, "id" | "fechaCreacion">) => Promise<PaseData>
   updatePase: (id: string, updates: Partial<PaseData>) => Promise<void>
   deletePase: (id: string) => Promise<void>
-  getPaseById: (id: string) => Promise<PaseData | null>
+  getPaseById: (id: string) => PaseData | undefined // Cambiado a síncrono
   refreshPases: () => Promise<void>
   signPase: (id: string, signatureData: { firma: string; sello: string }) => Promise<void>
   authorizePase: (id: string) => Promise<void>
@@ -179,20 +179,9 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [toast],
   )
 
-  const getPaseById = useCallback(async (id: string): Promise<PaseData | null> => {
-    try {
-      const response = await apiClient.getPassById(id)
-
-      if (response.success && response.data) {
-        return response.data as PaseData
-      } else {
-        return null
-      }
-    } catch (error) {
-      console.error("Error getting pass by ID:", error)
-      return null
-    }
-  }, [])
+  const getPaseById = useCallback((id: string): PaseData | undefined => {
+    return pases.find((pase) => pase.id === id)
+  }, [pases])
 
   const signPase = useCallback(
     async (id: string, signatureData: { firma: string; sello: string }) => {
@@ -208,7 +197,7 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ? {
                     ...pase,
                     ...signatureData,
-                    estado: "firmado" as const,
+                    estado: "FIRMADO" as const,
                     fechaFirma: new Date().toISOString(),
                   }
                 : pase,
@@ -251,7 +240,7 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
               pase.id === id
                 ? {
                     ...pase,
-                    estado: "autorizado" as const,
+                    estado: "AUTORIZADO" as const,
                     fechaAutorizacion: new Date().toISOString(),
                   }
                 : pase,
@@ -294,7 +283,7 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
               pase.id === id
                 ? {
                     ...pase,
-                    estado: "rechazado" as const,
+                    estado: "RECHAZADO" as const,
                   }
                 : pase,
             ),

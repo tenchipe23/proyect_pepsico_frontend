@@ -12,26 +12,32 @@ import { useAuth } from "@/context/auth-context"
 import { useRouter, useSearchParams } from "next/navigation"
 
 export default function LoginPage() {
-  const { login, isAuthenticated, user, loading } = useAuth()
+  const { login, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  let userRole = ""
   const [formData, setFormData] = useState({
     email: "",
-    password: "",
+    password: "", 
   })
+  const [initialCheckComplete, setInitialCheckComplete] = useState(false)
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      const redirectPath = searchParams.get("redirect") || getDefaultRedirectPath(user.role)
-      router.push(redirectPath)
-    }
-  }, [isAuthenticated, user, router, searchParams])
+  // useEffect(() => {
+  //   if (initialCheckComplete && isAuthenticated && user) {
+  //     const redirectPath = searchParams.get("redirect") || getDefaultRedirectPath(user.role)
+  //     console.log("Auth check - Redirecting to:", redirectPath, "for role:", user.role)
+  //     router.push(redirectPath)
+  //   } else if (!loading) {
+  //     setInitialCheckComplete(true)
+  //   }
+  // }, [isAuthenticated, user, router, searchParams, loading, initialCheckComplete])
 
   const getDefaultRedirectPath = (role: string) => {
-    switch (role) {
+    const normalizedRole = role
+    
+    switch (normalizedRole) {
       case "admin":
         return "/admin"
       case "autorizador":
@@ -52,6 +58,7 @@ export default function LoginPage() {
     if (error) setError(null)
   }
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -66,12 +73,18 @@ export default function LoginPage() {
 
       const result = await login(formData.email, formData.password)
 
-      if (result.success) {
-        // Redirect will be handled by useEffect
-      } else {
+      if (result.success && result.user) {
+        const redirectPath = searchParams.get("redirect") || getDefaultRedirectPath(result.user.role)
+        console.log("Redirecting to:", redirectPath, "for role:", result.user.role)
+        router.push(redirectPath)
+        } else {
         setError(result.error || "Error de inicio de sesión")
       }
+
+      userRole = result.user?.role || ""
+
     } catch (error) {
+      console.error("Login error:", error)
       setError("Error de conexión. Intente nuevamente.")
     } finally {
       setIsLoggingIn(false)
@@ -83,7 +96,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-center min-h-[80vh]">
         <div className="text-center">
           <Loader2Icon className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Cargando...</p>
+          <p>Verificando sesión...</p>
         </div>
       </div>
     )
