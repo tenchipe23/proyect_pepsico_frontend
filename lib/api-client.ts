@@ -1,10 +1,20 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
 interface ApiResponse<T> {
   data?: T
   message?: string
   success: boolean
   error?: string
+}
+
+interface PaginatedResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+  first: boolean
+  last: boolean
 }
 
 class ApiClient {
@@ -69,11 +79,11 @@ class ApiClient {
   async login(email: string, password: string) {
     return this.request<{
       token: string
-      id: number
+      id: string
       nombre: string
       apellido: string
       email: string
-      role: string
+      rol: string
     }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
@@ -87,98 +97,154 @@ class ApiClient {
   }
 
   // User management endpoints
-  async getUsers(page = 0, size = 10) {
-    return this.request<{
-      content: any[]
-      totalElements: number
-      totalPages: number
-      number: number
-      size: number
-    }>(`/admin/users?page=${page}&size=${size}`)
+  async getUsers(page = 0, size = 10, search?: string) {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      ...(search && { search }),
+    })
+    return this.request<PaginatedResponse<any>>(`/admin/users?${params}`)
   }
 
-  async createUser(userData: any) {
-    return this.request("/admin/users", {
+  async getUserById(id: string) {
+    return this.request<any>(`/admin/users/${id}`)
+  }
+
+  async createUser(userData: {
+    name: string
+    apellido?: string
+    email: string
+    password: string
+    role: string
+  }) {
+    return this.request<any>("/admin/users", {
       method: "POST",
       body: JSON.stringify(userData),
     })
   }
 
-  async updateUser(id: number, userData: any) {
-    return this.request(`/admin/users/${id}`, {
+  async updateUser(
+    id: string,
+    userData: {
+      nombre: string
+      apellido?: string
+      email: string
+      rol: string
+      password?: string
+    },
+  ) {
+    return this.request<any>(`/admin/users/${id}`, {
       method: "PUT",
       body: JSON.stringify(userData),
     })
   }
 
-  async deleteUser(id: number) {
+  async deleteUser(id: string) {
     return this.request(`/admin/users/${id}`, {
       method: "DELETE",
     })
   }
 
+  async getUsersByRole(role: string) {
+    return this.request<any[]>(`/admin/users/role/${role}`)
+  }
+
+  async getUserStats() {
+    return this.request<{
+      totalUsers: number
+      adminCount: number
+      autorizadorCount: number
+      seguridadCount: number
+    }>("/admin/users/stats")
+  }
+
   // Vehicle Exit Pass endpoints
-  async getPasses(page = 0, size = 10, status?: string) {
+  async getPasses(page = 0, size = 10, status?: string, search?: string) {
     const params = new URLSearchParams({
       page: page.toString(),
       size: size.toString(),
       ...(status && { status }),
+      ...(search && { search }),
     })
-    return this.request<{
-      content: any[]
-      totalElements: number
-      totalPages: number
-      number: number
-      size: number
-    }>(`/vehicle-exit-passes/paginated?${params}`)
+    return this.request<PaginatedResponse<any>>(`/passes?${params}`)
   }
 
   async getPassById(id: string) {
-    return this.request(`/vehicle-exit-passes/${id}`)
+    return this.request<any>(`/passes/${id}`)
+  }
+
+  async getPassByFolio(folio: string) {
+    return this.request<any>(`/passes/folio/${folio}`)
   }
 
   async createPass(passData: any) {
-    return this.request("/vehicle-exit-passes", {
+    return this.request<any>("/passes/create", {
       method: "POST",
       body: JSON.stringify(passData),
     })
   }
 
   async updatePass(id: string, passData: any) {
-    return this.request(`/vehicle-exit-passes/${id}`, {
+    return this.request<any>(`/passes/${id}`, {
       method: "PUT",
       body: JSON.stringify(passData),
     })
   }
 
-  async signPass(id: string, signatureData: { firma: string; sello: string }) {
-    return this.request(`/vehicle-exit-passes/${id}/sign`, {
-      method: "PUT",
+  async signPass(id: string, signatureData: { signature: string; seal: string }) {
+    return this.request<any>(`/passes/${id}/sign`, {
+      method: "POST",
       body: JSON.stringify(signatureData),
     })
   }
 
   async authorizePass(id: string) {
-    return this.request(`/vehicle-exit-passes/${id}/authorize`, {
-      method: "PUT",
+    return this.request<any>(`/passes/authorize/${id}`, {
+      method: "POST",
     })
   }
 
   async rejectPass(id: string, reason?: string) {
-    return this.request(`/vehicle-exit-passes/${id}/reject`, {
-      method: "PUT",
+    return this.request<any>(`/passes/reject/${id}`, {
+      method: "POST",
       body: JSON.stringify({ reason }),
     })
   }
 
-  async searchPasses(searchTerm: string, field: string, page = 0, size = 10) {
+  async deletePass(id: string) {
+    return this.request(`/passes/${id}`, {
+      method: "DELETE",
+    })
+  }
+
+  // Global search endpoint
+  async globalSearch(query: string, page = 0, size = 10) {
     const params = new URLSearchParams({
-      searchTerm,
-      field,
+      query,
       page: page.toString(),
       size: size.toString(),
     })
-    return this.request<{ content: any[] }>(`/vehicle-exit-passes/search?${params}`)
+    return this.request<PaginatedResponse<any>>(`/search/global?${params}`)
+  }
+
+  // Statistics endpoints
+  async getPassStatistics() {
+    return this.request<{
+      totalPasses: number
+      pendingPasses: number
+      signedPasses: number
+      authorizedPasses: number
+      rejectedPasses: number
+      todayPasses: number
+    }>("/passes/stats/count-by-status")
+  }
+
+  async getPassCountByStatus(status: string) {
+    return this.request<number>(`/passes/stats/count-by-status/${status}`)
+  }
+
+  async getPassCountCreatedToday() {
+    return this.request<number>("/passes/stats/count-created-today")
   }
 
   // Vehicle management endpoints
@@ -187,41 +253,23 @@ class ApiClient {
   }
 
   async createVehicle(vehicleData: any) {
-    return this.request("/vehiculos", {
+    return this.request<any>("/vehiculos", {
       method: "POST",
       body: JSON.stringify(vehicleData),
     })
   }
 
-  async updateVehicle(id: number, vehicleData: any) {
-    return this.request(`/vehiculos/${id}`, {
+  async updateVehicle(id: string, vehicleData: any) {
+    return this.request<any>(`/vehiculos/${id}`, {
       method: "PUT",
       body: JSON.stringify(vehicleData),
     })
   }
 
-  async deleteVehicle(id: number) {
+  async deleteVehicle(id: string) {
     return this.request(`/vehiculos/${id}`, {
       method: "DELETE",
     })
-  }
-
-  // Statistics endpoints
-  async getPassStatistics() {
-    return this.request<{
-      totalPasses: number
-      pendingPasses: number
-      authorizedPasses: number
-      rejectedPasses: number
-    }>("/vehicle-exit-passes/statistics")
-  }
-
-  async getUserStatistics() {
-    return this.request<{
-      totalUsers: number
-      activeUsers: number
-      usersByRole: Record<string, number>
-    }>("/admin/users/statistics")
   }
 }
 

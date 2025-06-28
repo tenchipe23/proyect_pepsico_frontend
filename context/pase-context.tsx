@@ -28,21 +28,26 @@ export interface PaseData {
   fechaCreacion: string
   fechaFirma?: string
   fechaAutorizacion?: string
+  operador?: any
 }
 
 interface PaseContextType {
   pases: PaseData[]
   loading: boolean
   error: string | null
+  totalPages: number
+  currentPage: number
+  totalElements: number
   addPase: (pase: Omit<PaseData, "id" | "fechaCreacion">) => Promise<PaseData>
   updatePase: (id: string, updates: Partial<PaseData>) => Promise<void>
   deletePase: (id: string) => Promise<void>
-  getPaseById: (id: string) => PaseData | undefined // Cambiado a síncrono
-  refreshPases: () => Promise<void>
-  signPase: (id: string, signatureData: { firma: string; sello: string }) => Promise<void>
+  getPaseById: (id: string) => Promise<PaseData | null>
+  refreshPases: (page?: number, size?: number, status?: string, search?: string) => Promise<void>
+  signPase: (id: string, signatureData: { signature: string; seal: string }) => Promise<void>
   authorizePase: (id: string) => Promise<void>
   rejectPase: (id: string, reason?: string) => Promise<void>
-  searchPases: (searchTerm: string, field: string) => Promise<PaseData[]>
+  searchPases: (query: string, page?: number, size?: number) => Promise<void>
+  getStatistics: () => Promise<any>
 }
 
 const PaseContext = createContext<PaseContextType | undefined>(undefined)
@@ -51,24 +56,58 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pases, setPases] = useState<PaseData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [totalPages, setTotalPages] = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
   const { toast } = useToast()
 
-  const refreshPases = useCallback(async () => {
+  const refreshPases = useCallback(async (page = 0, size = 10, status?: string, search?: string) => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await apiClient.getPasses(0, 100) // Get all passes
+      const response = await apiClient.getPasses(page, size, status, search)
 
       if (response.success && response.data) {
         setPases(response.data.content || [])
+        setTotalPages(response.data.totalPages || 0)
+        setCurrentPage(response.data.number || 0)
+        setTotalElements(response.data.totalElements || 0)
       } else {
         setError(response.error || "Error loading passes")
+        setPases([])
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Error loading passes"
       setError(errorMessage)
       console.error("Error refreshing passes:", error)
+      setPases([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const searchPases = useCallback(async (query: string, page = 0, size = 10) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await apiClient.globalSearch(query, page, size)
+
+      if (response.success && response.data) {
+        setPases(response.data.content || [])
+        setTotalPages(response.data.totalPages || 0)
+        setCurrentPage(response.data.number || 0)
+        setTotalElements(response.data.totalElements || 0)
+      } else {
+        setError(response.error || "Error searching passes")
+        setPases([])
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Error searching passes"
+      setError(errorMessage)
+      console.error("Error searching passes:", error)
+      setPases([])
     } finally {
       setLoading(false)
     }
@@ -86,7 +125,7 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const response = await apiClient.createPass({
           ...paseData,
-          fechaCreacion: new Date().toISOString(),
+          estado: "PENDIENTE",
         })
 
         if (response.success && response.data) {
@@ -156,13 +195,18 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         setLoading(true)
 
-        // Note: Implement soft delete in backend if needed
-        setPases((prev) => prev.filter((pase) => pase.id !== id))
+        const response = await apiClient.deletePass(id)
 
-        toast({
-          title: "Pase eliminado",
-          description: "El pase ha sido eliminado exitosamente",
-        })
+        if (response.success) {
+          setPases((prev) => prev.filter((pase) => pase.id !== id))
+
+          toast({
+            title: "Pase eliminado",
+            description: "El pase ha sido eliminado exitosamente",
+          })
+        } else {
+          throw new Error(response.error || "Error deleting pass")
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Error deleting pass"
         setError(errorMessage)
@@ -179,12 +223,23 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [toast],
   )
 
-  const getPaseById = useCallback((id: string): PaseData | undefined => {
-    return pases.find((pase) => pase.id === id)
-  }, [pases])
+  const getPaseById = useCallback(async (id: string): Promise<PaseData | null> => {
+    try {
+      const response = await apiClient.getPassById(id)
+
+      if (response.success && response.data) {
+        return response.data as PaseData
+      } else {
+        return null
+      }
+    } catch (error) {
+      console.error("Error getting pass by ID:", error)
+      return null
+    }
+  }, [])
 
   const signPase = useCallback(
-    async (id: string, signatureData: { firma: string; sello: string }) => {
+    async (id: string, signatureData: { signature: string; seal: string }) => {
       try {
         setLoading(true)
 
@@ -196,7 +251,8 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
               pase.id === id
                 ? {
                     ...pase,
-                    ...signatureData,
+                    firma: signatureData.signature,
+                    sello: signatureData.seal,
                     estado: "FIRMADO" as const,
                     fechaFirma: new Date().toISOString(),
                   }
@@ -313,18 +369,16 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [toast],
   )
 
-  const searchPases = useCallback(async (searchTerm: string, field: string): Promise<PaseData[]> => {
+  const getStatistics = useCallback(async () => {
     try {
-      const response = await apiClient.searchPasses(searchTerm, field)
-
+      const response = await apiClient.getPassStatistics()
       if (response.success && response.data) {
-        return response.data.content || []
-      } else {
-        return []
+        return response.data
       }
+      return null
     } catch (error) {
-      console.error("Error searching passes:", error)
-      return []
+      console.error("Error getting statistics:", error)
+      return null
     }
   }, [])
 
@@ -332,6 +386,9 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     pases,
     loading,
     error,
+    totalPages,
+    currentPage,
+    totalElements,
     addPase,
     updatePase,
     deletePase,
@@ -341,6 +398,7 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authorizePase,
     rejectPase,
     searchPases,
+    getStatistics,
   }
 
   return <PaseContext.Provider value={value}>{children}</PaseContext.Provider>

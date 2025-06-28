@@ -8,7 +8,6 @@ import { usePase, type PaseData } from "@/context/pase-context"
 import { useAuth } from "@/context/auth-context"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   FileTextIcon,
@@ -17,7 +16,6 @@ import {
   BellIcon,
   CheckCircleIcon,
   XCircleIcon,
-  CalendarIcon,
   RefreshCwIcon,
 } from "lucide-react"
 import AppHeader from "@/components/app-header"
@@ -29,58 +27,47 @@ import { useRouter } from "next/navigation"
 import LoadingIndicator from "@/components/loading-indicator"
 
 export default function AutorizadorDashboardPage() {
-  const { pases, loading, authorizePase, rejectPase, refreshPases } = usePase()
+  const { pases, loading, authorizePase, rejectPase, refreshPases, searchPases } = usePase()
   const { user, logout } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchField, setSearchField] = useState<keyof PaseData>("folio")
   const [activeTab, setActiveTab] = useState("pendientes")
-  const [dateFilter, setDateFilter] = useState<string | null>(null)
   const [showNotifications, setShowNotifications] = useState(false)
   const router = useRouter()
 
-  // Refresh data on mount
+  // Debounced search
   useEffect(() => {
-    refreshPases()
-  }, [refreshPases])
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchPases(searchQuery.trim())
+      } else {
+        refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase())
+      }
+    }, 500)
 
-  // Filter passes based on search query, tab, and date filter
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, activeTab, searchPases, refreshPases])
+
+  // Filter passes based on search query and tab
   const getFilteredPases = useCallback(() => {
     return pases
       .filter((pase) => {
         // Filter by tab (status)
         if (activeTab === "pendientes") {
-          return pase.estado === "pendiente"
+          return pase.estado === "PENDIENTE"
         } else if (activeTab === "firmados") {
-          return pase.estado === "firmado"
+          return pase.estado === "FIRMADO"
         } else if (activeTab === "rechazados") {
-          return pase.estado === "rechazado"
+          return pase.estado === "RECHAZADO"
         } else if (activeTab === "todos") {
           return true
         }
         return false
       })
-      .filter((pase) => {
-        // Filter by search query
-        if (!searchQuery) return true
-
-        const value = pase[searchField]
-        if (typeof value === "string") {
-          return value.toLowerCase().includes(searchQuery.toLowerCase())
-        }
-        return false
-      })
-      .filter((pase) => {
-        // Filter by date
-        if (!dateFilter) return true
-
-        const paseDate = new Date(pase.fecha).toISOString().split("T")[0]
-        return paseDate === dateFilter
-      })
       .sort((a, b) => {
         // Sort by creation date (newest first)
         return new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
       })
-  }, [pases, activeTab, searchQuery, searchField, dateFilter])
+  }, [pases, activeTab])
 
   const filteredPases = getFilteredPases()
 
@@ -89,10 +76,14 @@ export default function AutorizadorDashboardPage() {
     if (typeof window === "undefined") return []
 
     const lastChecked = localStorage.getItem("lastNotificationCheck")
-    if (!lastChecked) return []
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
     return pases
-      .filter((pase) => pase.estado === "pendiente" && new Date(pase.fechaCreacion) > new Date(lastChecked))
+      .filter((pase) => {
+        const isRecent = new Date(pase.fechaCreacion) > oneDayAgo
+        const isAfterLastCheck = !lastChecked || new Date(pase.fechaCreacion) > new Date(lastChecked)
+        return pase.estado === "PENDIENTE" && isRecent && isAfterLastCheck
+      })
       .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
   }, [pases])
 
@@ -126,25 +117,25 @@ export default function AutorizadorDashboardPage() {
 
   const getEstadoBadge = (estado: PaseData["estado"]) => {
     switch (estado) {
-      case "pendiente":
+      case "PENDIENTE":
         return (
           <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
             Pendiente
           </Badge>
         )
-      case "firmado":
+      case "FIRMADO":
         return (
           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
             Firmado
           </Badge>
         )
-      case "autorizado":
+      case "AUTORIZADO":
         return (
           <Badge variant="default" className="bg-green-600">
             Autorizado
           </Badge>
         )
-      case "rechazado":
+      case "RECHAZADO":
         return <Badge variant="destructive">Rechazado</Badge>
       default:
         return <Badge variant="outline">Desconocido</Badge>
@@ -156,9 +147,8 @@ export default function AutorizadorDashboardPage() {
     router.push("/login")
   }
 
-  const handleClearFilters = () => {
+  const handleClearSearch = () => {
     setSearchQuery("")
-    setDateFilter(null)
   }
 
   const handleNotificationClick = () => {
@@ -168,7 +158,7 @@ export default function AutorizadorDashboardPage() {
     }
   }
 
-  if (loading) {
+  if (loading && pases.length === 0) {
     return (
       <AuthRedirect allowedRoles={["admin", "autorizador"]}>
         <div className="flex justify-center items-center h-[50vh]">
@@ -180,7 +170,7 @@ export default function AutorizadorDashboardPage() {
 
   return (
     <AuthRedirect allowedRoles={["admin", "autorizador"]}>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <AppHeader
           title="Panel de Autorización"
           description={`Bienvenido, ${user?.name || "Usuario"}. Aquí puede autorizar los pases de salida.`}
@@ -194,7 +184,7 @@ export default function AutorizadorDashboardPage() {
                   onClick={handleNotificationClick}
                 >
                   <BellIcon className="h-5 w-5" />
-                  <NotificationBadge className="absolute -top-1 -right-1" />
+                  {newNotifications.length > 0 && <NotificationBadge className="absolute -top-1 -right-1" />}
                 </Button>
 
                 {showNotifications && (
@@ -263,44 +253,19 @@ export default function AutorizadorDashboardPage() {
             <h2 className="text-xl font-bold">Buscar Pases</h2>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full md:w-1/4">
-                <Select value={searchField} onValueChange={(value) => setSearchField(value as keyof PaseData)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Campo de búsqueda" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="folio">Folio</SelectItem>
-                    <SelectItem value="operadorNombre">Nombre Operador</SelectItem>
-                    <SelectItem value="operadorApellidoPaterno">Apellido Operador</SelectItem>
-                    <SelectItem value="tractorPlaca">Placa Tractor</SelectItem>
-                    <SelectItem value="razonSocial">Razón Social</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex gap-4">
               <div className="flex-1 relative">
                 <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder={`Buscar por ${searchField}...`}
+                  placeholder="Buscar por folio, operador, placa, razón social..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              <div className="w-full md:w-1/4 flex gap-2">
-                <div className="relative flex-1">
-                  <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    type="date"
-                    value={dateFilter || ""}
-                    onChange={(e) => setDateFilter(e.target.value || null)}
-                    className="pl-10"
-                  />
-                </div>
-                <Button variant="outline" size="icon" onClick={handleClearFilters} title="Limpiar filtros">
-                  <RefreshCwIcon className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button variant="outline" size="icon" onClick={handleClearSearch} title="Limpiar búsqueda">
+                <RefreshCwIcon className="h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -311,20 +276,20 @@ export default function AutorizadorDashboardPage() {
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="pendientes" className="relative">
                   Pendientes
-                  {pases.filter((p) => p.estado === "pendiente").length > 0 && (
-                    <Badge className="ml-2 bg-yellow-500">{pases.filter((p) => p.estado === "pendiente").length}</Badge>
+                  {pases.filter((p) => p.estado === "PENDIENTE").length > 0 && (
+                    <Badge className="ml-2 bg-yellow-500">{pases.filter((p) => p.estado === "PENDIENTE").length}</Badge>
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="firmados">
                   Firmados
-                  {pases.filter((p) => p.estado === "firmado").length > 0 && (
-                    <Badge className="ml-2 bg-blue-500">{pases.filter((p) => p.estado === "firmado").length}</Badge>
+                  {pases.filter((p) => p.estado === "FIRMADO").length > 0 && (
+                    <Badge className="ml-2 bg-blue-500">{pases.filter((p) => p.estado === "FIRMADO").length}</Badge>
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="rechazados">
                   Rechazados
-                  {pases.filter((p) => p.estado === "rechazado").length > 0 && (
-                    <Badge className="ml-2 bg-red-500">{pases.filter((p) => p.estado === "rechazado").length}</Badge>
+                  {pases.filter((p) => p.estado === "RECHAZADO").length > 0 && (
+                    <Badge className="ml-2 bg-red-500">{pases.filter((p) => p.estado === "RECHAZADO").length}</Badge>
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="todos">Todos</TabsTrigger>
@@ -340,6 +305,7 @@ export default function AutorizadorDashboardPage() {
                       <TableHead>Fecha</TableHead>
                       <TableHead>Operador</TableHead>
                       <TableHead>Placa</TableHead>
+                      <TableHead>Razón Social</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -355,6 +321,7 @@ export default function AutorizadorDashboardPage() {
                           <TableCell>{new Date(pase.fecha).toLocaleDateString()}</TableCell>
                           <TableCell>{`${pase.operadorNombre} ${pase.operadorApellidoPaterno}`}</TableCell>
                           <TableCell>{pase.tractorPlaca}</TableCell>
+                          <TableCell>{pase.razonSocial}</TableCell>
                           <TableCell>{getEstadoBadge(pase.estado)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
@@ -365,10 +332,10 @@ export default function AutorizadorDashboardPage() {
                                 className="flex items-center gap-1"
                               >
                                 <FileTextIcon className="h-3 w-3" />
-                                {pase.estado === "pendiente" ? "Autorizar" : "Ver Detalle"}
+                                {pase.estado === "PENDIENTE" ? "Autorizar" : "Ver Detalle"}
                               </Button>
 
-                              {pase.estado === "pendiente" && pase.firma && pase.sello && (
+                              {pase.estado === "FIRMADO" && (
                                 <>
                                   <Button
                                     variant="default"
@@ -396,16 +363,18 @@ export default function AutorizadorDashboardPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                           <p className="mb-2 font-medium">No se encontraron pases de salida</p>
                           <p className="text-sm">
-                            {activeTab === "pendientes"
-                              ? "No hay pases pendientes de autorización"
-                              : activeTab === "firmados"
-                                ? "No hay pases firmados"
-                                : activeTab === "rechazados"
-                                  ? "No hay pases rechazados"
-                                  : "No hay pases que coincidan con los criterios de búsqueda"}
+                            {searchQuery
+                              ? "No hay pases que coincidan con la búsqueda"
+                              : activeTab === "pendientes"
+                                ? "No hay pases pendientes de autorización"
+                                : activeTab === "firmados"
+                                  ? "No hay pases firmados"
+                                  : activeTab === "rechazados"
+                                    ? "No hay pases rechazados"
+                                    : "No hay pases registrados"}
                           </p>
                         </TableCell>
                       </TableRow>

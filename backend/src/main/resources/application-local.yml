@@ -6,39 +6,30 @@ spring:
     name: pepsico-vehicle-exit-pass
   
   datasource:
-    url: jdbc:postgresql://postgres:5432/pepsico_vehicle_pass
+    url: jdbc:postgresql://localhost:5432/pepsico_vehicle_pass
     username: pepsico_user
     password: pepsico123
     driver-class-name: org.postgresql.Driver
   
   jpa:
     hibernate:
-      ddl-auto: update  # Let Hibernate handle schema updates
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-    defer-datasource-initialization: true  # Important: Defer data initialization until after Hibernate has created the schema
+    defer-datasource-initialization: true
   
   sql:
     init:
       mode: always
-      schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql
-      continue-on-error: true
-      platform: postgresql  # Specify the database platform
   
   security:
     jwt:
-      secret: ${JWT_SECRET}
-      expiration: ${JWT_EXPIRATION} 
-  # CORS Configuration
-  cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:3001}
-    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
-    allowed-headers: "*"
-    allow-credentials: true
+      secret: pepsico-jwt-secret-key-2024-very-secure-and-long
+      expiration: 86400000 # 24 hours
 
 logging:
   level:
@@ -52,30 +43,6 @@ management:
     web:
       exposure:
         include: health,info,metrics
-  health:
-    show-details: always
-  metrics:
-    binders:
-      processor:
-        enabled: false
-      system:
-        enabled: false
-    enable:
-      process: false
-      system: false
-      jvm: true
-      logback: true
-    distribution:
-      percentiles-histogram:
-        http.server.requests: true
-    web:
-      server:
-        request:
-          autotime:
-            enabled: true
-            percentiles: 0.5,0.75,0.90,0.95,0.99
-
-app:
-  jwt:
-    secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
-    expiration: ${JWT_EXPIRATION:86400000}
+  endpoint:
+    health:
+      show-details: always

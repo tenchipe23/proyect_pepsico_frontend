@@ -1,54 +1,36 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { LogOutIcon } from "lucide-react"
+import { useAuth } from "@/context/auth-context"
 import AppHeader from "@/components/app-header"
 import UserManagement from "@/components/admin/user-management"
 import PasesManagement from "@/components/admin/pases-management"
 import AuthRedirect from "@/components/auth-redirect"
+import LoadingIndicator from "@/components/loading-indicator"
 
 export default function AdminPage() {
-  const [user, setUser] = useState<any>(null)
+  const { user, logout, loading } = useAuth()
   const [activeTab, setActiveTab] = useState("usuarios")
-  const [isLoading, setIsLoading] = useState(true)
 
-  // Load user data after authentication is confirmed
-  useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("user")
-      if (storedUser) {
-        setUser(JSON.parse(storedUser))
-      }
-      setIsLoading(false)
-    } catch (error) {
-      console.error("Error loading user data:", error)
-      setIsLoading(false)
-    }
-  }, [])
+  const handleLogout = () => {
+    logout()
+  }
 
-  // If still loading after authentication, show loading indicator
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="text-white text-center">
-          <h2 className="text-xl font-bold mb-2">Cargando...</h2>
-          <p>Cargando panel de administración</p>
-        </div>
+        <LoadingIndicator text="Cargando panel de administración" size="lg" />
       </div>
     )
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("user")
-    window.location.href = "/login"
-  }
-
   return (
     <AuthRedirect allowedRoles={["admin"]}>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <AppHeader
           title="Panel de Administración"
           description={`Bienvenido, ${user?.name || "Administrador"}. Gestione usuarios y pases de salida.`}
@@ -68,14 +50,12 @@ export default function AdminPage() {
           <CardHeader className="bg-gray-900 text-white p-4">
             <h2 className="text-xl font-bold mb-4">Panel de Control</h2>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-6">
             <Tabs defaultValue="usuarios" value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <div className="px-4 pt-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="usuarios">Gestión de Usuarios</TabsTrigger>
-                  <TabsTrigger value="pases">Gestión de Pases</TabsTrigger>
-                </TabsList>
-              </div>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="usuarios">Gestión de Usuarios</TabsTrigger>
+                <TabsTrigger value="pases">Gestión de Pases</TabsTrigger>
+              </TabsList>
               <TabsContent value="usuarios" className="m-0">
                 <UserManagement />
               </TabsContent>

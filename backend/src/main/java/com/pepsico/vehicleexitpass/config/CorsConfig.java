@@ -13,16 +13,16 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
     
-    @Value("${spring.cors.allowed-origins}")
+    @Value("${cors.allowed-origins}")
     private String allowedOrigins;
     
-    @Value("${spring.cors.allowed-methods}")
+    @Value("${cors.allowed-methods}")
     private String allowedMethods;
     
-    @Value("${spring.cors.allowed-headers}")
+    @Value("${cors.allowed-headers}")
     private String allowedHeaders;
     
-    @Value("${spring.cors.allow-credentials}")
+    @Value("${cors.allow-credentials}")
     private boolean allowCredentials;
     
     @Bean

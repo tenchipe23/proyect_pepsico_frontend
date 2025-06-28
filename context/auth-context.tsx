@@ -5,28 +5,28 @@ import { createContext, useState, useEffect, useContext, useCallback } from "rea
 import { apiClient } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 
-export let UserRole: string | null = null
+export type UserRole = "admin" | "autorizador" | "seguridad"
 
 interface User {
-  id: number
+  id: string
   name: string
   email: string
-  role: string
+  role: UserRole
 }
 
 interface AuthContextProps {
   user: User | null
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   loading: boolean
   isAuthenticated: boolean
-  hasRole: (roles: string[]) => boolean
+  hasRole: (roles: UserRole[]) => boolean
   refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextProps>({
   user: null,
-  login: async () => ({ success: false, error: "Error de inicio de sesión", user: undefined}),
+  login: async () => ({ success: false }),
   logout: () => {},
   loading: false,
   isAuthenticated: false,
@@ -37,65 +37,46 @@ const AuthContext = createContext<AuthContextProps>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const { toast } = useToast()
 
-  // Initialize auth state from localStorage
-  const initializeAuth = useCallback(() => {
-    const token = localStorage.getItem("token")
-    const userData = localStorage.getItem("user")
-
-    if (token && userData) {
+  // Initialize user from localStorage on mount
+  useEffect(() => {
+    const initializeAuth = () => {
       try {
-        const parsedUser = JSON.parse(userData)
-        setUser(parsedUser)
-        setIsAuthenticated(true)
+        const token = localStorage.getItem("token")
+        const storedUser = localStorage.getItem("user")
+
+        if (token && storedUser) {
+          const userData = JSON.parse(storedUser)
+          setUser(userData)
+        }
       } catch (error) {
-        console.error("Error parsing user data:", error)
+        console.error("Error initializing auth:", error)
         localStorage.removeItem("token")
         localStorage.removeItem("user")
+      } finally {
+        setLoading(false)
       }
     }
-    setLoading(false)
-  }, [])
 
-  useEffect(() => {
     initializeAuth()
-  }, [initializeAuth])
+  }, [])
 
   const login = useCallback(
     async (email: string, password: string) => {
       try {
         setLoading(true)
         const response = await apiClient.login(email, password)
-        console.log("Login response:", response)
 
         if (response.success && response.data) {
-          console.log("User data:", response.data)
-          // Asegurarse de que el rol esté en minúsculas y sin espacios
-          const userRole = response.data.role?.toLowerCase().trim()
-          UserRole = userRole
-          console.log("User role:", userRole)
-
-          if (!userRole) {
-            console.error("No role found in response:", response)
-            throw new Error("No se pudo determinar el rol del usuario")
-          }
-          
-          
           const userData: User = {
             id: response.data.id,
             name: `${response.data.nombre} ${response.data.apellido}`,
             email: response.data.email,
-            role: userRole
+            role: response.data.rol.toLowerCase() as UserRole,
           }
-          console.log("User data:", userData)
 
-          // Actualizar el estado de autenticación
           setUser(userData)
-          setIsAuthenticated(true)
-          
-          // Guardar en localStorage
           localStorage.setItem("token", response.data.token)
           localStorage.setItem("user", JSON.stringify(userData))
 
@@ -104,18 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             description: `Bienvenido, ${userData.name}`,
           })
 
-          return { 
-            success: true,
-            user: userData,
-            userRole: userRole
-          }
+          return { success: true }
         } else {
-          // Limpiar datos de autenticación en caso de error
-          localStorage.removeItem("token")
-          localStorage.removeItem("user")
-          setUser(null)
-          setIsAuthenticated(false)
-          
           return {
             success: false,
             error: response.error || "Credenciales inválidas",
@@ -123,21 +94,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error("Login error:", error)
-        // Limpiar datos de autenticación en caso de error
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        setUser(null)
-        setIsAuthenticated(false)
-        
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Error de conexión. Intente nuevamente.",
+          error: "Error de conexión. Intente nuevamente.",
         }
       } finally {
-        setLoading(false)     
+        setLoading(false)
       }
     },
-    [toast]
+    [toast],
   )
 
   const logout = useCallback(async () => {
@@ -147,7 +112,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Logout error:", error)
     } finally {
       setUser(null)
-      setIsAuthenticated(false)
       localStorage.removeItem("token")
       localStorage.removeItem("user")
 
@@ -159,14 +123,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [toast])
 
   const refreshUser = useCallback(async () => {
-    // Implementation for refreshing user data if needed
-    // This could fetch updated user info from the backend
-  }, [])
+    if (user) {
+      try {
+        const response = await apiClient.getUserById(user.id)
+        if (response.success && response.data) {
+          const updatedUser: User = {
+            id: response.data.id,
+            name: `${response.data.nombre} ${response.data.apellido}`,
+            email: response.data.email,
+            role: response.data.rol.toLowerCase() as UserRole,
+          }
+          setUser(updatedUser)
+          localStorage.setItem("user", JSON.stringify(updatedUser))
+        }
+      } catch (error) {
+        console.error("Error refreshing user:", error)
+      }
+    }
+  }, [user])
 
   const hasRole = useCallback(
-    (roles: string[]) => {
+    (roles: UserRole[]) => {
       if (!user) return false
-      return roles.includes(user.role || '')
+      return roles.includes(user.role)
     },
     [user],
   )
@@ -176,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     loading,
-    isAuthenticated,
+    isAuthenticated: !!user,
     hasRole,
     refreshUser,
   }

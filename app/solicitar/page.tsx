@@ -14,10 +14,10 @@ import SuccessDialog from "@/components/success-dialog"
 export default function SolicitarPage() {
   const { addPase, loading } = usePase()
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
-  const [lastPase, setLastPase] = useState<any | null>(null) // Cambia aquí
+  const [lastPaseId, setLastPaseId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const [formData, setFormData] = useState<Omit<PaseData, "id" | "estado" >>({
+  const [formData, setFormData] = useState<Omit<PaseData, "id" | "firma" | "sello" | "fechaCreacion" | "estado">>({
     folio: `PST-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)
       .toString()
       .padStart(4, "0")}`,
@@ -37,7 +37,6 @@ export default function SolicitarPage() {
     comentarios: "",
     firma: "",
     sello: "",
-    fechaCreacion: new Date().toISOString(),
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -67,9 +66,6 @@ export default function SolicitarPage() {
       ecoDolly: "",
       placasDolly: "",
       comentarios: "",
-      firma: "",
-      sello: "",
-      fechaCreacion: new Date().toISOString(),
     })
   }
 
@@ -98,12 +94,14 @@ export default function SolicitarPage() {
       // Create new pass
       const newPase = await addPase({
         ...formData,
-        estado: "PENDIENTE", // Default state
+        estado: "pendiente",
         firma: "",
         sello: "",
+        fechaCreacion: new Date().toISOString(),
       })
 
-      setLastPase(newPase) // Guarda el objeto pase
+      // Save the ID for the success dialog
+      setLastPaseId(newPase.id || null)
 
       // Show success dialog
       setShowSuccessDialog(true)
@@ -117,7 +115,6 @@ export default function SolicitarPage() {
   const handleCloseSuccessDialog = () => {
     setShowSuccessDialog(false)
     resetForm()
-    setLastPase(null)
   }
 
   return (
@@ -385,9 +382,7 @@ export default function SolicitarPage() {
       </div>
 
       {/* Success Dialog */}
-      {showSuccessDialog && lastPase && (
-        <SuccessDialog pase={lastPase} onClose={handleCloseSuccessDialog} />
-      )}
+      {showSuccessDialog && <SuccessDialog paseId={lastPaseId} onClose={handleCloseSuccessDialog} />}
     </div>
   )
 }

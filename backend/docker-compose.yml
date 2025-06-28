@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
-      - "5439:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -22,9 +22,7 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: password
       JWT_SECRET: mySecretKey123456789012345678901234567890
-      JWT_EXPIRATION: 86400000
       CORS_ORIGINS: http://localhost:3000,http://localhost:3001
-      JAVA_TOOL_OPTIONS: "-Djdk.management.container.cgroup.disabled=true"
     ports:
       - "8080:8080"
     depends_on:

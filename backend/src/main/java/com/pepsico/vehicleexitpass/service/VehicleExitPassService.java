@@ -8,12 +8,12 @@ import com.pepsico.vehicleexitpass.exception.ResourceNotFoundException;
 import com.pepsico.vehicleexitpass.mapper.VehicleExitPassMapper;
 import com.pepsico.vehicleexitpass.repository.UserRepository;
 import com.pepsico.vehicleexitpass.repository.VehicleExitPassRepository;
+import com.pepsico.vehicleexitpass.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,64 +25,65 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class VehicleExitPassService {
-
-    private final VehicleExitPassRepository vehicleExitPassRepository;
-    private final UserRepository userRepository;
-    private final VehicleExitPassMapper vehicleExitPassMapper;
-    private final BitacoraService bitacoraService;
+    
+    @Autowired
+    private VehicleExitPassRepository passRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private VehicleExitPassMapper passMapper;
 
     @Autowired
-    public VehicleExitPassService(VehicleExitPassRepository vehicleExitPassRepository,
-                                 UserRepository userRepository,
-                                 VehicleExitPassMapper vehicleExitPassMapper,
-                                 BitacoraService bitacoraService) {
-        this.vehicleExitPassRepository = vehicleExitPassRepository;
-        this.userRepository = userRepository;
-        this.vehicleExitPassMapper = vehicleExitPassMapper;
-        this.bitacoraService = bitacoraService;
-    }
-
+    private BitacoraService bitacoraService;
+    
     public List<VehicleExitPassDto> getAllPasses() {
-        return vehicleExitPassRepository.findAll().stream()
-            .map(vehicleExitPassMapper::toDto)
+        return passRepository.findAll().stream()
+            .map(passMapper::toDto)
             .collect(Collectors.toList());
     }
-
+    
     public Page<VehicleExitPassDto> getAllPasses(Pageable pageable) {
-        return vehicleExitPassRepository.findAll(pageable)
-            .map(vehicleExitPassMapper::toDto);
+        return passRepository.findAll(pageable)
+            .map(passMapper::toDto);
     }
-
-    public Page<VehicleExitPassDto> getPassesByStatus(String status, Pageable pageable) {
-        return vehicleExitPassRepository.findByEstado(PassStatus.valueOf(status.toUpperCase()), pageable)
-            .map(vehicleExitPassMapper::toDto);
+    
+    public Page<VehicleExitPassDto> getPassesByStatus(PassStatus status, Pageable pageable) {
+        return passRepository.findByEstado(status, pageable)
+            .map(passMapper::toDto);
     }
-
+    
     public Page<VehicleExitPassDto> searchPasses(String search, Pageable pageable) {
-        if (search == null || search.trim().isEmpty()) {
-            return vehicleExitPassRepository.findAll(pageable)
-                .map(vehicleExitPassMapper::toDto);
-        }
-        
-        return vehicleExitPassRepository.buscarPorTractorPlacaONombreOperadorOComentarios(
-            search, search, search, pageable)
-            .map(vehicleExitPassMapper::toDto);
+        return passRepository.findWithSearch(search, pageable)
+            .map(passMapper::toDto);
     }
-
+    
+    public Page<VehicleExitPassDto> searchPassesByStatus(PassStatus status, String search, Pageable pageable) {
+        return passRepository.findByEstadoWithSearch(status, search, pageable)
+            .map(passMapper::toDto);
+    }
+    
+    // New global search method
+    public Page<VehicleExitPassDto> globalSearch(String query, Pageable pageable) {
+        return passRepository.globalSearch(query, pageable)
+            .map(passMapper::toDto);
+    }
+    
     public VehicleExitPassDto getPassById(String id) {
-        VehicleExitPass pass = vehicleExitPassRepository.findById(UUID.fromString(id))
+        VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-        return vehicleExitPassMapper.toDto(pass);
+        return passMapper.toDto(pass);
     }
-
+    
     public VehicleExitPassDto getPassByFolio(String folio) {
-        VehicleExitPass pass = vehicleExitPassRepository.findByFolio(folio)
+        VehicleExitPass pass = passRepository.findByFolio(folio)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with folio: " + folio));
-        return vehicleExitPassMapper.toDto(pass);
+        return passMapper.toDto(pass);
     }
-
+    
     public VehicleExitPassDto createPass(VehicleExitPassDto passDto) {
-        VehicleExitPass pass = vehicleExitPassMapper.toEntity(passDto);
+        VehicleExitPass pass = passMapper.toEntity(passDto);
         
         // Generate unique folio if not provided
         if (pass.getFolio() == null || pass.getFolio().isEmpty()) {
@@ -94,34 +95,38 @@ public class VehicleExitPassService {
         
         // Set created by user if authenticated
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof UserDetails) {
-            UserDetails userDetails = (UserDetails) auth.getPrincipal();
-            User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
+            UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
+            User user = userRepository.findById(userPrincipal.getId())
+                .orElse(null);
             pass.setOperador(user);
         }
         
-        VehicleExitPass savedPass = vehicleExitPassRepository.save(pass);
+        VehicleExitPass savedPass = passRepository.save(pass);
         bitacoraService.registrarAccion(savedPass, "CREACION", "Pase creado");
-        return vehicleExitPassMapper.toDto(savedPass);
+        return passMapper.toDto(savedPass);
     }
-
+    
     public VehicleExitPassDto updatePass(String id, VehicleExitPassDto passDto) {
-        VehicleExitPass existingPass = vehicleExitPassRepository.findById(UUID.fromString(id))
+        VehicleExitPass existingPass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
         // Update fields
-        vehicleExitPassMapper.updateFromDto(passDto, existingPass);
+        existingPass.setRazonSocial(passDto.getRazonSocial());
+        existingPass.setFecha(passDto.getFecha());
+        existingPass.setTractorEco(passDto.getTractorEco());
+        existingPass.setTractorPlaca(passDto.getTractorPlaca());
+        existingPass.setComentarios(passDto.getComentarios());
         
-        VehicleExitPass updatedPass = vehicleExitPassRepository.save(existingPass);
+        VehicleExitPass updatedPass = passRepository.save(existingPass);
         bitacoraService.registrarAccion(updatedPass, "ACTUALIZACION", "Pase actualizado");
-        return vehicleExitPassMapper.toDto(updatedPass);
+        return passMapper.toDto(updatedPass);
     }
-
+    
     public VehicleExitPassDto signPass(String id, String signature, String seal) {
-        VehicleExitPass pass = vehicleExitPassRepository.findById(UUID.fromString(id))
+        VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-            
+        
         if (pass.getEstado() != PassStatus.PENDIENTE) {
             throw new RuntimeException("Pass can only be signed when in PENDIENTE status");
         }
@@ -131,15 +136,15 @@ public class VehicleExitPassService {
         pass.setEstado(PassStatus.FIRMADO);
         pass.setFechaFirma(LocalDateTime.now());
         
-        VehicleExitPass updatedPass = vehicleExitPassRepository.save(pass);
+        VehicleExitPass updatedPass = passRepository.save(pass);
         bitacoraService.registrarAccion(updatedPass, "FIRMA", "Pase firmado con sello digital");
-        return vehicleExitPassMapper.toDto(updatedPass);
+        return passMapper.toDto(updatedPass);
     }
-
+    
     public VehicleExitPassDto authorizePass(String id) {
-        VehicleExitPass pass = vehicleExitPassRepository.findById(UUID.fromString(id))
+        VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-            
+        
         if (pass.getEstado() != PassStatus.FIRMADO) {
             throw new RuntimeException("Pass can only be authorized when in FIRMADO status");
         }
@@ -147,44 +152,51 @@ public class VehicleExitPassService {
         pass.setEstado(PassStatus.AUTORIZADO);
         pass.setFechaAutorizacion(LocalDateTime.now());
         
-        VehicleExitPass updatedPass = vehicleExitPassRepository.save(pass);
+        VehicleExitPass updatedPass = passRepository.save(pass);
         bitacoraService.registrarAccion(updatedPass, "AUTORIZACION", "Pase autorizado");
-        return vehicleExitPassMapper.toDto(updatedPass);
+        return passMapper.toDto(updatedPass);
     }
-
+    
     public VehicleExitPassDto rejectPass(String id, String reason) {
-        VehicleExitPass pass = vehicleExitPassRepository.findById(UUID.fromString(id))
+        VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-            
+        
         if (pass.getEstado() == PassStatus.AUTORIZADO) {
             throw new RuntimeException("Cannot reject an already authorized pass");
         }
         
         pass.setEstado(PassStatus.RECHAZADO);
-        pass.setComentarios((pass.getComentarios() != null ? pass.getComentarios() + "\n" : "") + 
-                           "Rechazado: " + reason);
+        pass.setComentarios(pass.getComentarios() + "\n\nRechazado: " + reason);
         
-        VehicleExitPass updatedPass = vehicleExitPassRepository.save(pass);
+        VehicleExitPass updatedPass = passRepository.save(pass);
         bitacoraService.registrarAccion(updatedPass, "RECHAZO", "Pase rechazado: " + reason);
-        return vehicleExitPassMapper.toDto(updatedPass);
+        return passMapper.toDto(updatedPass);
     }
-
+    
     public void deletePass(String id) {
-        VehicleExitPass pass = vehicleExitPassRepository.findById(UUID.fromString(id))
+        VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-            
+        
         if (pass.getEstado() == PassStatus.AUTORIZADO) {
             throw new RuntimeException("Cannot delete an authorized pass");
         }
         
-        vehicleExitPassRepository.delete(pass);
+        passRepository.delete(pass);
     }
-
+    
+    public long getPassCountByStatus(PassStatus status) {
+        return passRepository.countByEstado(status);
+    }
+    
+    public long getPassCountCreatedSince(LocalDateTime date) {
+        return passRepository.countCreatedSince(date);
+    }
+    
     private String generateUniqueFolio() {
         String folio;
         do {
-            folio = "PEP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        } while (vehicleExitPassRepository.existsByFolio(folio));
+            folio = "PASE-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        } while (passRepository.existsByFolio(folio));
         return folio;
     }
 }

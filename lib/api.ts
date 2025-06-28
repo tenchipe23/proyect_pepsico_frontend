@@ -35,32 +35,13 @@ export const apiClient = {
   },
 
   async getPases(page = 0, size = 10) {
-    return this.request(`/vehicle-exit-passes/paginated?page=${page}&size=${size}`)
+    return this.request(`/passes/paginated?page=${page}&size=${size}`)
   },
 
   async createPase(paseData: any) {
-    // Forzar el valor de 'estado' a mayúsculas, sin importar cómo venga
-    let estadoValue = paseData.status || paseData.estado;
-    if (estadoValue) {
-      estadoValue = estadoValue.toUpperCase();
-    }
-    const dataToSend = {
-      ...paseData,
-      ...(estadoValue && { estado: estadoValue })
-    };
-    delete dataToSend.status;
-    // Sobrescribe cualquier valor previo de 'estado' con el correcto en mayúsculas
-    if (dataToSend.estado) {
-      dataToSend.estado = dataToSend.estado.toUpperCase();
-    }
-    console.log("Enviando paseData:", dataToSend);
-    // No enviar Authorization para este endpoint público
-    return this.request("/vehicle-exit-passes", {
+    return this.request("/passes", {
       method: "POST",
-      body: JSON.stringify(dataToSend),
-      headers: {
-        "Content-Type": "application/json"
-      }
+      body: JSON.stringify(paseData),
     })
   },
 

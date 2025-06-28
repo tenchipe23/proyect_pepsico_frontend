@@ -9,44 +9,39 @@ spring:
   
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://postgres:5432/pepsico_vehicle_pass
+    url: jdbc:postgresql://localhost:5432/pepsico_vehicle_pass
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
   
-  # CORS Configuration
-  cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:3001}
-    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
-    allowed-headers: "*"
-    allow-credentials: true
-
   # JPA Configuration
   jpa:
     hibernate:
-      ddl-auto: update  # Let Flyway handle schema
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
     defer-datasource-initialization: true
-    open-in-view: false
-
+  
+  # SQL Initialization
   sql:
     init:
       mode: always
       data-locations: classpath:data.sql
 
-  security:
-    jwt:
-      secret: ${JWT_SECRET}
-      expiration: ${JWT_EXPIRATION}
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  expiration: 86400000 # 24 hours in milliseconds
 
-app:
-  jwt:
-    secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
-    expiration: ${JWT_EXPIRATION:86400000}
+# CORS Configuration
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:3001}
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
 
 # Logging
 logging:
@@ -66,15 +61,6 @@ management:
   endpoint:
     health:
       show-details: always
-  health:
-    db:
-      enabled: true
-    diskSpace:
-      enabled: true
-    livenessState:
-      enabled: true
-    readinessState:
-      enabled: true
 
 ---
 # Development Profile

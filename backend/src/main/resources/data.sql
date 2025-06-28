@@ -1,9 +1,8 @@
 -- Insertar usuarios por defecto
 INSERT INTO usuarios (id, email, nombre, apellido, password, rol, fecha_creacion, estado) VALUES
-  ('admin-001', 'admin@pepsico.com', 'Administrador', 'Sistema', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'ADMIN', NOW(), true),
-  ('seg-001', 'seguridad@pepsico.com', 'Guardia', 'Seguridad', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'SEGURIDAD', NOW(), true),
-  ('aut-001', 'autorizador@pepsico.com', 'Supervisor', 'Autorizador', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'AUTORIZADOR', NOW(), true)
-ON CONFLICT (id) DO NOTHING;
+('admin-001', 'admin@pepsico.com', 'Administrador', 'Sistema', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'ADMIN', NOW(), true),
+('seg-001', 'seguridad@pepsico.com', 'Guardia', 'Seguridad', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'SEGURIDAD', NOW(), true),
+('aut-001', 'autorizador@pepsico.com', 'Supervisor', 'Autorizador', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'AUTORIZADOR', NOW(), true);
 
 -- Insertar vehículos de ejemplo
 INSERT INTO vehiculos (id, tipo, numero_economico, placa, descripcion, estado) VALUES
@@ -13,15 +12,15 @@ INSERT INTO vehiculos (id, tipo, numero_economico, placa, descripcion, estado) V
 ('veh-004', 'REMOLQUE', 'R002', 'JKL-012', 'Remolque 48 pies', true),
 ('veh-005', 'DOLLY', 'D001', 'MNO-345', 'Dolly convertidor', true);
 
--- Insertar pase de ejemplo (usa un UUID válido)
+-- Insertar pase de ejemplo
 INSERT INTO pases (id, folio, estado, razon_social, fecha, tractor_eco, tractor_placa, operador_id, fecha_creacion) VALUES
-('11111111-1111-1111-1111-111111111111', 'PASE-2024-001', 'PENDIENTE', 'Transportes PepsiCo', '2024-01-15', 'T001', 'ABC-123', 'seg-001', NOW());
+('pase-001', 'PASE-2024-001', 'PENDIENTE', 'Transportes PepsiCo', '2024-01-15', 'T001', 'ABC-123', 'seg-001', NOW());
 
--- Insertar relación pase-vehículo (usa el mismo UUID)
+-- Insertar relación pase-vehículo
 INSERT INTO pase_vehiculos (id, pase_id, vehiculo_id, tipo) VALUES
-('pv-001', '11111111-1111-1111-1111-111111111111', 'veh-001', 'TRACTOR'),
-('pv-002', '11111111-1111-1111-1111-111111111111', 'veh-003', 'REMOLQUE1');
+('pv-001', 'pase-001', 'veh-001', 'TRACTOR'),
+('pv-002', 'pase-001', 'veh-003', 'REMOLQUE1');
 
--- Insertar entrada en bitácora (usa el mismo UUID)
+-- Insertar entrada en bitácora
 INSERT INTO bitacora (id, pase_id, usuario_id, accion, fecha, detalles) VALUES
-('bit-001', '11111111-1111-1111-1111-111111111111', 'seg-001', 'CREACION', NOW(), 'Pase creado por el sistema');
+('bit-001', 'pase-001', 'seg-001', 'CREACION', NOW(), 'Pase creado por el sistema');

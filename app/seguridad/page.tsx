@@ -5,48 +5,37 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { usePase, type PaseData } from "@/context/pase-context"
+import { useAuth } from "@/context/auth-context"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FileTextIcon, SearchIcon, LogOutIcon, RefreshCwIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { FileTextIcon, SearchIcon, LogOutIcon } from "lucide-react"
 import AppHeader from "@/components/app-header"
 import AuthRedirect from "@/components/auth-redirect"
+import LoadingIndicator from "@/components/loading-indicator"
 
 export default function SeguridadPage() {
   const router = useRouter()
-  const { pases } = usePase()
-  const [user, setUser] = useState<any>(null)
+  const { pases, loading, refreshPases, searchPases } = usePase()
+  const { user, logout } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchField, setSearchField] = useState<keyof PaseData>("folio")
-  const [isLoading, setIsLoading] = useState(true)
 
-  // Load user data after authentication is confirmed
+  // Debounced search
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("user")
-      if (storedUser) {
-        setUser(JSON.parse(storedUser))
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchPases(searchQuery.trim())
+      } else {
+        refreshPases(0, 50, "AUTORIZADO") // Only show authorized passes
       }
-      setIsLoading(false)
-    } catch (error) {
-      console.error("Error loading user data:", error)
-      setIsLoading(false)
-    }
-  }, [])
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery, searchPases, refreshPases])
 
   // Filter only signed or authorized passes
   const filteredPases = pases
-    .filter((pase) => pase.estado === "firmado" || pase.estado === "autorizado")
-    .filter((pase) => {
-      if (!searchQuery) return true
-
-      const value = pase[searchField]
-      if (typeof value === "string") {
-        return value.toLowerCase().includes(searchQuery.toLowerCase())
-      }
-      return false
-    })
+    .filter((pase) => pase.estado === "FIRMADO" || pase.estado === "AUTORIZADO")
     .sort((a, b) => {
       // Sort by creation date (newest first)
       return new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
@@ -58,13 +47,13 @@ export default function SeguridadPage() {
 
   const getEstadoBadge = (estado: PaseData["estado"]) => {
     switch (estado) {
-      case "firmado":
+      case "FIRMADO":
         return (
           <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
             Firmado
           </Badge>
         )
-      case "autorizado":
+      case "AUTORIZADO":
         return (
           <Badge variant="default" className="bg-green-600">
             Autorizado
@@ -76,25 +65,25 @@ export default function SeguridadPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("user")
-    window.location.href = "/login"
+    logout()
+    router.push("/login")
   }
 
-  // If still loading after authentication, show loading indicator
-  if (isLoading) {
+  const handleClearSearch = () => {
+    setSearchQuery("")
+  }
+
+  if (loading && pases.length === 0) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="text-white text-center">
-          <h2 className="text-xl font-bold mb-2">Cargando...</h2>
-          <p>Cargando panel de seguridad</p>
-        </div>
+        <LoadingIndicator text="Cargando panel de seguridad" size="lg" />
       </div>
     )
   }
 
   return (
     <AuthRedirect allowedRoles={["admin", "seguridad"]}>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <AppHeader
           title="Panel de Seguridad"
           description={`Bienvenido, ${user?.name || "Usuario"}. Aquí puede verificar los pases de salida autorizados.`}
@@ -115,38 +104,29 @@ export default function SeguridadPage() {
             <h2 className="text-xl font-bold">Buscar Pases de Salida</h2>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full md:w-1/4">
-                <Select value={searchField} onValueChange={(value) => setSearchField(value as keyof PaseData)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Campo de búsqueda" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="folio">Folio</SelectItem>
-                    <SelectItem value="operadorNombre">Nombre Operador</SelectItem>
-                    <SelectItem value="operadorApellidoPaterno">Apellido Operador</SelectItem>
-                    <SelectItem value="tractorPlaca">Placa Tractor</SelectItem>
-                    <SelectItem value="razonSocial">Razón Social</SelectItem>
-                    <SelectItem value="fecha">Fecha</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex gap-4">
               <div className="flex-1 relative">
                 <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder={`Buscar por ${searchField}...`}
+                  placeholder="Buscar por folio, operador, placa, razón social..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
+              <Button variant="outline" size="icon" onClick={handleClearSearch} title="Limpiar búsqueda">
+                <RefreshCwIcon className="h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-xl">
           <CardHeader className="bg-gray-100 p-4 border-b">
-            <h2 className="text-lg font-bold">Pases de Salida Autorizados</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold">Pases de Salida Autorizados</h2>
+              <Badge className="bg-green-600">{filteredPases.length} pases disponibles</Badge>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {filteredPases.length > 0 ? (
@@ -158,7 +138,9 @@ export default function SeguridadPage() {
                       <TableHead>Fecha</TableHead>
                       <TableHead>Operador</TableHead>
                       <TableHead>Placa</TableHead>
+                      <TableHead>Razón Social</TableHead>
                       <TableHead>Estado</TableHead>
+                      <TableHead>Fecha Autorización</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -169,7 +151,15 @@ export default function SeguridadPage() {
                         <TableCell>{new Date(pase.fecha).toLocaleDateString()}</TableCell>
                         <TableCell>{`${pase.operadorNombre} ${pase.operadorApellidoPaterno}`}</TableCell>
                         <TableCell>{pase.tractorPlaca}</TableCell>
+                        <TableCell>{pase.razonSocial}</TableCell>
                         <TableCell>{getEstadoBadge(pase.estado)}</TableCell>
+                        <TableCell>
+                          {pase.fechaAutorizacion
+                            ? new Date(pase.fechaAutorizacion).toLocaleDateString()
+                            : pase.fechaFirma
+                              ? new Date(pase.fechaFirma).toLocaleDateString()
+                              : "-"}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="outline"
@@ -188,8 +178,16 @@ export default function SeguridadPage() {
               </div>
             ) : (
               <div className="p-8 text-center text-gray-500">
-                <p className="mb-2 font-medium">No hay pases de salida autorizados</p>
-                <p className="text-sm">Los pases firmados y autorizados aparecerán aquí.</p>
+                <p className="mb-2 font-medium">
+                  {searchQuery
+                    ? "No se encontraron pases que coincidan con la búsqueda"
+                    : "No hay pases de salida autorizados"}
+                </p>
+                <p className="text-sm">
+                  {searchQuery
+                    ? "Intente con otros términos de búsqueda"
+                    : "Los pases firmados y autorizados aparecerán aquí."}
+                </p>
               </div>
             )}
           </CardContent>
