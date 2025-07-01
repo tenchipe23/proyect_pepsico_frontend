@@ -135,8 +135,13 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fechaCreacion: now,
           fechaFirma: now, // Initialize with current time
           fechaAutorizacion: now, // Initialize with current time
+          // Asegurarse de que los campos del operador se envíen correctamente
+          operadorNombre: paseData.operadorNombre || '',
+          operadorApellidoPaterno: paseData.operadorApellidoPaterno || '',
+          operadorApellidoMaterno: paseData.operadorApellidoMaterno || ''
         };
         
+        console.log("Enviando datos al backend:", newPass);
         const response = await apiClient.createPass(newPass)
 
         if (response.success && response.data) {

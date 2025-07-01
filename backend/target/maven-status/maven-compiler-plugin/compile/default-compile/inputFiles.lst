@@ -6,6 +6,7 @@
 /Users/pepe/Desktop/proyecto_pepsico_vercel/proyect_pepsico_frontend_vercel/backend/src/main/java/com/pepsico/vehicleexitpass/entity/PaseVehiculo.java
 /Users/pepe/Desktop/proyecto_pepsico_vercel/proyect_pepsico_frontend_vercel/backend/src/main/java/com/pepsico/vehicleexitpass/mapper/VehiculoMapper.java
 /Users/pepe/Desktop/proyecto_pepsico_vercel/proyect_pepsico_frontend_vercel/backend/src/main/java/com/pepsico/vehicleexitpass/dto/VehiculoDto.java
+/Users/pepe/Desktop/proyecto_pepsico_vercel/proyect_pepsico_frontend_vercel/backend/src/main/java/com/pepsico/vehicleexitpass/config/JacksonConfig.java
 /Users/pepe/Desktop/proyecto_pepsico_vercel/proyect_pepsico_frontend_vercel/backend/src/main/java/com/pepsico/vehicleexitpass/entity/User.java
 /Users/pepe/Desktop/proyecto_pepsico_vercel/proyect_pepsico_frontend_vercel/backend/src/main/java/com/pepsico/vehicleexitpass/mapper/VehicleExitPassMapper.java
 /Users/pepe/Desktop/proyecto_pepsico_vercel/proyect_pepsico_frontend_vercel/backend/src/main/java/com/pepsico/vehicleexitpass/repository/UserRepository.java

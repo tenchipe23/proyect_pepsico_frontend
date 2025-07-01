@@ -44,4 +44,5 @@ com/pepsico/vehicleexitpass/entity/PassStatus.class
 com/pepsico/vehicleexitpass/mapper/VehiculoMapper.class
 com/pepsico/vehicleexitpass/entity/User.class
 com/pepsico/vehicleexitpass/dto/LoginResponse.class
+com/pepsico/vehicleexitpass/config/JacksonConfig.class
 com/pepsico/vehicleexitpass/entity/Vehiculo.class

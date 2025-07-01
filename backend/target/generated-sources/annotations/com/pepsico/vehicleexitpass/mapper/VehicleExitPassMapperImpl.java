@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-06-30T16:41:41-0600",
+    date = "2025-06-30T21:05:26-0600",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 17.0.14 (Eclipse Adoptium)"
 )
 @Component
@@ -30,12 +30,21 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         vehicleExitPassDto.setFecha( vehicleExitPass.getFecha() );
         vehicleExitPassDto.setTractorEco( vehicleExitPass.getTractorEco() );
         vehicleExitPassDto.setTractorPlaca( vehicleExitPass.getTractorPlaca() );
+        vehicleExitPassDto.setRemolque1Eco( vehicleExitPass.getRemolque1Eco() );
+        vehicleExitPassDto.setRemolque1Placa( vehicleExitPass.getRemolque1Placa() );
+        vehicleExitPassDto.setRemolque2Eco( vehicleExitPass.getRemolque2Eco() );
+        vehicleExitPassDto.setRemolque2Placa( vehicleExitPass.getRemolque2Placa() );
+        vehicleExitPassDto.setEcoDolly( vehicleExitPass.getEcoDolly() );
+        vehicleExitPassDto.setPlacasDolly( vehicleExitPass.getPlacasDolly() );
         vehicleExitPassDto.setComentarios( vehicleExitPass.getComentarios() );
         vehicleExitPassDto.setFirma( vehicleExitPass.getFirma() );
         vehicleExitPassDto.setSello( vehicleExitPass.getSello() );
         vehicleExitPassDto.setFechaCreacion( vehicleExitPass.getFechaCreacion() );
         vehicleExitPassDto.setFechaFirma( vehicleExitPass.getFechaFirma() );
         vehicleExitPassDto.setFechaAutorizacion( vehicleExitPass.getFechaAutorizacion() );
+        vehicleExitPassDto.setOperadorNombre( vehicleExitPass.getOperadorNombre() );
+        vehicleExitPassDto.setOperadorApellidoPaterno( vehicleExitPass.getOperadorApellidoPaterno() );
+        vehicleExitPassDto.setOperadorApellidoMaterno( vehicleExitPass.getOperadorApellidoMaterno() );
         vehicleExitPassDto.setOperador( userToUserDto( vehicleExitPass.getOperador() ) );
 
         return vehicleExitPassDto;
@@ -61,7 +70,15 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         vehicleExitPass.setComentarios( vehicleExitPassDto.getComentarios() );
         vehicleExitPass.setFechaFirma( vehicleExitPassDto.getFechaFirma() );
         vehicleExitPass.setFechaAutorizacion( vehicleExitPassDto.getFechaAutorizacion() );
-        vehicleExitPass.setOperador( userDtoToUser( vehicleExitPassDto.getOperador() ) );
+        vehicleExitPass.setOperadorNombre( vehicleExitPassDto.getOperadorNombre() );
+        vehicleExitPass.setOperadorApellidoPaterno( vehicleExitPassDto.getOperadorApellidoPaterno() );
+        vehicleExitPass.setOperadorApellidoMaterno( vehicleExitPassDto.getOperadorApellidoMaterno() );
+        vehicleExitPass.setRemolque1Eco( vehicleExitPassDto.getRemolque1Eco() );
+        vehicleExitPass.setRemolque1Placa( vehicleExitPassDto.getRemolque1Placa() );
+        vehicleExitPass.setRemolque2Eco( vehicleExitPassDto.getRemolque2Eco() );
+        vehicleExitPass.setRemolque2Placa( vehicleExitPassDto.getRemolque2Placa() );
+        vehicleExitPass.setEcoDolly( vehicleExitPassDto.getEcoDolly() );
+        vehicleExitPass.setPlacasDolly( vehicleExitPassDto.getPlacasDolly() );
 
         return vehicleExitPass;
     }
@@ -84,15 +101,15 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         vehicleExitPass.setComentarios( vehicleExitPassDto.getComentarios() );
         vehicleExitPass.setFechaFirma( vehicleExitPassDto.getFechaFirma() );
         vehicleExitPass.setFechaAutorizacion( vehicleExitPassDto.getFechaAutorizacion() );
-        if ( vehicleExitPassDto.getOperador() != null ) {
-            if ( vehicleExitPass.getOperador() == null ) {
-                vehicleExitPass.setOperador( new User() );
-            }
-            userDtoToUser1( vehicleExitPassDto.getOperador(), vehicleExitPass.getOperador() );
-        }
-        else {
-            vehicleExitPass.setOperador( null );
-        }
+        vehicleExitPass.setOperadorNombre( vehicleExitPassDto.getOperadorNombre() );
+        vehicleExitPass.setOperadorApellidoPaterno( vehicleExitPassDto.getOperadorApellidoPaterno() );
+        vehicleExitPass.setOperadorApellidoMaterno( vehicleExitPassDto.getOperadorApellidoMaterno() );
+        vehicleExitPass.setRemolque1Eco( vehicleExitPassDto.getRemolque1Eco() );
+        vehicleExitPass.setRemolque1Placa( vehicleExitPassDto.getRemolque1Placa() );
+        vehicleExitPass.setRemolque2Eco( vehicleExitPassDto.getRemolque2Eco() );
+        vehicleExitPass.setRemolque2Placa( vehicleExitPassDto.getRemolque2Placa() );
+        vehicleExitPass.setEcoDolly( vehicleExitPassDto.getEcoDolly() );
+        vehicleExitPass.setPlacasDolly( vehicleExitPassDto.getPlacasDolly() );
     }
 
     protected UserDto userToUserDto(User user) {
@@ -112,39 +129,5 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         userDto.setEstado( user.getEstado() );
 
         return userDto;
-    }
-
-    protected User userDtoToUser(UserDto userDto) {
-        if ( userDto == null ) {
-            return null;
-        }
-
-        User user = new User();
-
-        user.setId( userDto.getId() );
-        user.setEmail( userDto.getEmail() );
-        user.setNombre( userDto.getNombre() );
-        user.setApellido( userDto.getApellido() );
-        user.setRol( userDto.getRol() );
-        user.setFechaCreacion( userDto.getFechaCreacion() );
-        user.setUltimoAcceso( userDto.getUltimoAcceso() );
-        user.setEstado( userDto.getEstado() );
-
-        return user;
-    }
-
-    protected void userDtoToUser1(UserDto userDto, User mappingTarget) {
-        if ( userDto == null ) {
-            return;
-        }
-
-        mappingTarget.setId( userDto.getId() );
-        mappingTarget.setEmail( userDto.getEmail() );
-        mappingTarget.setNombre( userDto.getNombre() );
-        mappingTarget.setApellido( userDto.getApellido() );
-        mappingTarget.setRol( userDto.getRol() );
-        mappingTarget.setFechaCreacion( userDto.getFechaCreacion() );
-        mappingTarget.setUltimoAcceso( userDto.getUltimoAcceso() );
-        mappingTarget.setEstado( userDto.getEstado() );
     }
 }

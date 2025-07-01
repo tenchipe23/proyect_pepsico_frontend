@@ -299,39 +299,59 @@ class ApiClient {
 
   async createPass(passData: any) {
     try {
-      // Ensure we have all required fields with proper types
+      // Asegurarse de que todos los campos requeridos tengan valores por defecto
       const passToCreate = {
-        ...passData,
+        // Campos básicos
         id: passData.id || crypto.randomUUID(),
-        fechaCreacion: passData.fechaCreacion || new Date().toISOString(),
-        estado: passData.estado || 'PENDIENTE',
-        // Ensure all required fields have default values
-        remolque1Eco: passData.remolque1Eco || '',
-        remolque1Placa: passData.remolque1Placa || '',
-        remolque2Eco: passData.remolque2Eco || '',
-        remolque2Placa: passData.remolque2Placa || '',
-        operadorApellidoMaterno: passData.operadorApellidoMaterno || '',
-        ecoDolly: passData.ecoDolly || '',
-        placasDolly: passData.placasDolly || '',
-        comentarios: passData.comentarios || ''
+        folio: passData.folio || `PST-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+        estado: 'PENDIENTE',
+        fechaCreacion: new Date().toISOString(),
+        
+        // Información de la empresa
+        razonSocial: passData.razonSocial || '',
+        fecha: passData.fecha || new Date().toISOString().split('T')[0],
+        
+        // Información del vehículo
+        tractorEco: passData.tractorEco || '',
+        tractorPlaca: passData.tractorPlaca || '',
+        remolque1Eco: passData.remolque1Eco || null,
+        remolque1Placa: passData.remolque1Placa || null,
+        remolque2Eco: passData.remolque2Eco || null,
+        remolque2Placa: passData.remolque2Placa || null,
+        
+        // Información del operador
+        operadorNombre: passData.operadorNombre || '',
+        operadorApellidoPaterno: passData.operadorApellidoPaterno || '',
+        operadorApellidoMaterno: passData.operadorApellidoMaterno || null,
+        
+        // Información adicional
+        ecoDolly: passData.ecoDolly || null,
+        placasDolly: passData.placasDolly || null,
+        comentarios: passData.comentarios || null,
+        
+        // Campos de control
+        fechaFirma: null,
+        fechaAutorizacion: null,
+        firma: null,
+        sello: null
       };
+      
+      console.log('Enviando pase al backend:', passToCreate);
       
       const response = await this.request<any>("/passes/create", {
         method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(passToCreate),
       });
 
       if (!response.success) {
-        throw new Error(response.error || 'Failed to create pass');
+        console.error('Error en la respuesta del servidor:', response);
+        throw new Error(response.error || 'Error al crear el pase');
       }
 
       return response;
     } catch (error) {
-      console.error('Error in createPass:', error);
+      console.error('Error en createPass:', error);
       throw error;
     }
   }

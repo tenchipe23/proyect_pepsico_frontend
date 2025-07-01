@@ -51,6 +51,42 @@ public class VehicleExitPass {
     @Column(name = "tractor_placa", nullable = false)
     private String tractorPlaca;
     
+    @Size(max = 100)
+    @Column(name = "operador_nombre")
+    private String operadorNombre;
+    
+    @Size(max = 100)
+    @Column(name = "operador_apellido_paterno")
+    private String operadorApellidoPaterno;
+    
+    @Size(max = 100)
+    @Column(name = "operador_apellido_materno")
+    private String operadorApellidoMaterno;
+    
+    @Size(max = 50)
+    @Column(name = "remolque1_eco")
+    private String remolque1Eco;
+    
+    @Size(max = 50)
+    @Column(name = "remolque1_placa")
+    private String remolque1Placa;
+    
+    @Size(max = 50)
+    @Column(name = "remolque2_eco")
+    private String remolque2Eco;
+    
+    @Size(max = 50)
+    @Column(name = "remolque2_placa")
+    private String remolque2Placa;
+    
+    @Size(max = 50)
+    @Column(name = "eco_dolly")
+    private String ecoDolly;
+    
+    @Size(max = 50)
+    @Column(name = "placas_dolly")
+    private String placasDolly;
+    
     @CreatedDate
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
@@ -128,6 +164,33 @@ public class VehicleExitPass {
     
     public User getOperador() { return operador; }
     public void setOperador(User operador) { this.operador = operador; }
+    
+    public String getOperadorNombre() { return operadorNombre; }
+    public void setOperadorNombre(String operadorNombre) { this.operadorNombre = operadorNombre; }
+    
+    public String getOperadorApellidoPaterno() { return operadorApellidoPaterno; }
+    public void setOperadorApellidoPaterno(String operadorApellidoPaterno) { this.operadorApellidoPaterno = operadorApellidoPaterno; }
+    
+    public String getOperadorApellidoMaterno() { return operadorApellidoMaterno; }
+    public void setOperadorApellidoMaterno(String operadorApellidoMaterno) { this.operadorApellidoMaterno = operadorApellidoMaterno; }
+    
+    public String getRemolque1Eco() { return remolque1Eco; }
+    public void setRemolque1Eco(String remolque1Eco) { this.remolque1Eco = remolque1Eco; }
+    
+    public String getRemolque1Placa() { return remolque1Placa; }
+    public void setRemolque1Placa(String remolque1Placa) { this.remolque1Placa = remolque1Placa; }
+    
+    public String getRemolque2Eco() { return remolque2Eco; }
+    public void setRemolque2Eco(String remolque2Eco) { this.remolque2Eco = remolque2Eco; }
+    
+    public String getRemolque2Placa() { return remolque2Placa; }
+    public void setRemolque2Placa(String remolque2Placa) { this.remolque2Placa = remolque2Placa; }
+    
+    public String getEcoDolly() { return ecoDolly; }
+    public void setEcoDolly(String ecoDolly) { this.ecoDolly = ecoDolly; }
+    
+    public String getPlacasDolly() { return placasDolly; }
+    public void setPlacasDolly(String placasDolly) { this.placasDolly = placasDolly; }
     
     public Set<PaseVehiculo> getPaseVehiculos() { return paseVehiculos; }
     public void setPaseVehiculos(Set<PaseVehiculo> paseVehiculos) { this.paseVehiculos = paseVehiculos; }

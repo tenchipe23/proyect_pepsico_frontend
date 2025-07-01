@@ -95,11 +95,18 @@ export default function SolicitarPage() {
         estado: "PENDIENTE",
       })
 
-      // Save the ID for the success dialog
-      setLastPase(newPase)
-
-      // Show success dialog
-      setShowSuccessDialog(true)
+      if (newPase) {
+        // Save the complete pass data for the success dialog
+        setLastPase({
+          ...formData,
+          ...newPase,
+          fecha: formData.fecha,
+          estado: "PENDIENTE"
+        })
+        setShowSuccessDialog(true)
+      } else {
+        console.error("No se recibieron datos del pase creado")
+      }
     } catch (error) {
       console.error("Error creating pass:", error)
     } finally {

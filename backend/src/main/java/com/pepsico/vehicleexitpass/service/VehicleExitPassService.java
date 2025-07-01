@@ -82,29 +82,109 @@ public class VehicleExitPassService {
         return passMapper.toDto(pass);
     }
     
+    @Transactional
     public VehicleExitPassDto createPass(VehicleExitPassDto passDto) {
-        VehicleExitPass pass = passMapper.toEntity(passDto);
-        
-        // Generate unique folio if not provided
-        if (pass.getFolio() == null || pass.getFolio().isEmpty()) {
-            pass.setFolio(generateUniqueFolio());
+        try {
+            // Validar campos requeridos
+            if (passDto.getRazonSocial() == null || passDto.getRazonSocial().trim().isEmpty()) {
+                throw new IllegalArgumentException("El campo 'razonSocial' es requerido");
+            }
+            if (passDto.getTractorEco() == null || passDto.getTractorEco().trim().isEmpty()) {
+                throw new IllegalArgumentException("El campo 'tractorEco' es requerido");
+            }
+            if (passDto.getTractorPlaca() == null || passDto.getTractorPlaca().trim().isEmpty()) {
+                throw new IllegalArgumentException("El campo 'tractorPlaca' es requerido");
+            }
+            if (passDto.getOperadorNombre() == null || passDto.getOperadorNombre().trim().isEmpty()) {
+                throw new IllegalArgumentException("El campo 'operadorNombre' es requerido");
+            }
+            if (passDto.getOperadorApellidoPaterno() == null || passDto.getOperadorApellidoPaterno().trim().isEmpty()) {
+                throw new IllegalArgumentException("El campo 'operadorApellidoPaterno' es requerido");
+            }
+            
+            // Crear una nueva entidad
+            VehicleExitPass pass = new VehicleExitPass();
+            
+            // Mapear campos básicos
+            pass.setId(passDto.getId() != null ? passDto.getId() : UUID.randomUUID().toString());
+            pass.setRazonSocial(passDto.getRazonSocial());
+            pass.setFecha(passDto.getFecha());
+            pass.setTractorEco(passDto.getTractorEco());
+            pass.setTractorPlaca(passDto.getTractorPlaca());
+            
+            // Campos opcionales con manejo de nulos
+            if (passDto.getComentarios() != null) {
+                pass.setComentarios(passDto.getComentarios());
+            }
+            if (passDto.getRemolque1Eco() != null) {
+                pass.setRemolque1Eco(passDto.getRemolque1Eco());
+            }
+            if (passDto.getRemolque1Placa() != null) {
+                pass.setRemolque1Placa(passDto.getRemolque1Placa());
+            }
+            if (passDto.getRemolque2Eco() != null) {
+                pass.setRemolque2Eco(passDto.getRemolque2Eco());
+            }
+            if (passDto.getRemolque2Placa() != null) {
+                pass.setRemolque2Placa(passDto.getRemolque2Placa());
+            }
+            if (passDto.getEcoDolly() != null) {
+                pass.setEcoDolly(passDto.getEcoDolly());
+            }
+            if (passDto.getPlacasDolly() != null) {
+                pass.setPlacasDolly(passDto.getPlacasDolly());
+            }
+            
+            // Generar folio único si no se proporciona
+            if (passDto.getFolio() == null || passDto.getFolio().trim().isEmpty()) {
+                pass.setFolio(generateUniqueFolio());
+            } else {
+                pass.setFolio(passDto.getFolio());
+            }
+            
+            // Establecer estado inicial
+            pass.setEstado(PassStatus.PENDIENTE);
+            pass.setFechaCreacion(LocalDateTime.now());
+            
+            // Establecer información del operador
+            pass.setOperadorNombre(passDto.getOperadorNombre().trim());
+            pass.setOperadorApellidoPaterno(passDto.getOperadorApellidoPaterno().trim());
+            if (passDto.getOperadorApellidoMaterno() != null && !passDto.getOperadorApellidoMaterno().trim().isEmpty()) {
+                pass.setOperadorApellidoMaterno(passDto.getOperadorApellidoMaterno().trim());
+            }
+            
+            // Establecer usuario autenticado si existe
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
+                UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
+                User user = userRepository.findById(userPrincipal.getId())
+                    .orElse(null);
+                pass.setOperador(user);
+            }
+            
+            System.out.println("Guardando pase: " + pass);
+            
+            // Guardar el pase
+            VehicleExitPass savedPass = passRepository.save(pass);
+            
+            System.out.println("Pase guardado con ID: " + savedPass.getId());
+            
+            // Registrar en bitácora en una nueva transacción
+            try {
+                bitacoraService.registrarAccion(savedPass, "CREACION", "Pase creado");
+                System.out.println("Registro de bitácora creado exitosamente");
+            } catch (Exception e) {
+                // No propagar el error de la bitácora para no afectar la creación del pase
+                System.err.println("Error al registrar en bitácora: " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            return passMapper.toDto(savedPass);
+        } catch (Exception e) {
+            System.err.println("Error en createPass: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error al crear el pase: " + e.getMessage(), e);
         }
-        
-        // Set initial status
-        pass.setEstado(PassStatus.PENDIENTE);
-        
-        // Set created by user if authenticated
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
-            UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
-            User user = userRepository.findById(userPrincipal.getId())
-                .orElse(null);
-            pass.setOperador(user);
-        }
-        
-        VehicleExitPass savedPass = passRepository.save(pass);
-        bitacoraService.registrarAccion(savedPass, "CREACION", "Pase creado");
-        return passMapper.toDto(savedPass);
     }
     
     @Transactional

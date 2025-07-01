@@ -36,11 +36,15 @@ export default function SuccessDialog({ pase, onClose }: SuccessDialogProps) {
             <p className="text-sm font-medium mb-2">Detalles de la solicitud:</p>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="font-medium">Folio:</div>
-              <div>{pase?.folio}</div>
+              <div>{pase?.folio || 'N/A'}</div>
               <div className="font-medium">Fecha:</div>
-              <div>{pase ? new Date(pase.fecha).toLocaleDateString() : ""}</div>
+              <div>{pase?.fecha ? new Date(pase.fecha).toLocaleDateString('es-MX') : 'N/A'}</div>
               <div className="font-medium">Operador:</div>
-              <div>{pase ? `${pase.operadorNombre} ${pase.operadorApellidoPaterno}` : ""}</div>
+              <div>
+                {pase?.operadorNombre && pase?.operadorApellidoPaterno 
+                  ? `${pase.operadorNombre} ${pase.operadorApellidoPaterno}`
+                  : pase?.operadorNombre || 'No especificado'}
+              </div>
             </div>
           </div>
           <p className="text-sm text-gray-500">

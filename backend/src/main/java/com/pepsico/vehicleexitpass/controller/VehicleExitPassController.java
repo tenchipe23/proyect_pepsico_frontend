@@ -19,11 +19,16 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 @RestController
 @RequestMapping("/passes")
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, 
+    allowedHeaders = "*", 
+    allowCredentials = "true",
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class VehicleExitPassController {
     
     @Autowired
@@ -146,9 +151,92 @@ public class VehicleExitPassController {
     }
     
     @PostMapping("/create")
-    public ResponseEntity<VehicleExitPassDto> createPass(@Valid @RequestBody VehicleExitPassDto passDto) {
-        VehicleExitPassDto createdPass = passService.createPass(passDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdPass);
+    @PreAuthorize("hasAnyRole('ADMIN', 'SEGURIDAD')")
+    public ResponseEntity<?> createPass(@Valid @RequestBody Map<String, Object> passData) {
+        try {
+            // Log de depuración
+            System.out.println("Datos recibidos en createPass: " + passData);
+            
+            // Configurar ObjectMapper para manejar fechas
+            ObjectMapper objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+                
+            // Configurar fechas por defecto si no están presentes
+            if (!passData.containsKey("fechaCreacion")) {
+                passData.put("fechaCreacion", LocalDateTime.now().toString());
+            }
+            
+            // Si se envía la fecha como string, asegurarse de que tenga el formato correcto
+            if (passData.containsKey("fecha") && passData.get("fecha") instanceof String) {
+                String fechaStr = (String) passData.get("fecha");
+                if (fechaStr.contains("T")) {
+                    // Si es una fecha ISO 8601 con tiempo, extraer solo la parte de la fecha
+                    passData.put("fecha", fechaStr.substring(0, 10));
+                }
+            }
+            
+            // Convertir el mapa a JSON y luego a DTO para asegurar el formato correcto
+            String json = objectMapper.writeValueAsString(passData);
+            System.out.println("JSON convertido: " + json);
+            
+            VehicleExitPassDto passDto = objectMapper.readValue(json, VehicleExitPassDto.class);
+            
+            // Asegurarse de que la fecha de creación esté establecida
+            if (passDto.getFechaCreacion() == null) {
+                passDto.setFechaCreacion(LocalDateTime.now());
+            }
+            
+            // Validar campos requeridos
+            if (passDto.getRazonSocial() == null || passDto.getRazonSocial().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(createErrorResponse("El campo 'razonSocial' es requerido", HttpStatus.BAD_REQUEST));
+            }
+            if (passDto.getFecha() == null) {
+                return ResponseEntity.badRequest().body(createErrorResponse("El campo 'fecha' es requerido", HttpStatus.BAD_REQUEST));
+            }
+            if (passDto.getTractorEco() == null || passDto.getTractorEco().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(createErrorResponse("El campo 'tractorEco' es requerido", HttpStatus.BAD_REQUEST));
+            }
+            if (passDto.getTractorPlaca() == null || passDto.getTractorPlaca().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(createErrorResponse("El campo 'tractorPlaca' es requerido", HttpStatus.BAD_REQUEST));
+            }
+            if (passDto.getOperadorNombre() == null || passDto.getOperadorNombre().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("El campo 'operadorNombre' es requerido");
+            }
+            if (passDto.getOperadorApellidoPaterno() == null || passDto.getOperadorApellidoPaterno().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("El campo 'operadorApellidoPaterno' es requerido");
+            }
+            
+            // Crear el pase
+            System.out.println("Creando pase con DTO: " + passDto);
+            VehicleExitPassDto createdPass = passService.createPass(passDto);
+            System.out.println("Pase creado exitosamente: " + createdPass.getId());
+            
+            // Asegurarse de que la respuesta tenga el formato correcto
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", createdPass);
+            
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+            
+        } catch (JsonProcessingException e) {
+            System.err.println("Error de procesamiento JSON: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(createErrorResponse("Formato de datos inválido: " + e.getMessage(), HttpStatus.BAD_REQUEST));
+                
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error de argumento inválido: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(createErrorResponse("Datos inválidos: " + e.getMessage(), HttpStatus.BAD_REQUEST));
+                
+        } catch (Exception e) {
+            System.err.println("Error inesperado al crear el pase: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(createErrorResponse("Error interno del servidor: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+        }
     }
     
     @PutMapping("/{id}")
