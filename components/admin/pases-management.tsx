@@ -1,15 +1,33 @@
 "use client"
 
+import * as React from 'react';
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePase, type PaseData } from "@/context/pase-context"
 import { useToast } from "@/components/ui/use-toast"
+import { cn } from "@/lib/utils"
+
+// Custom Badge component since we removed the original one
+const Badge = ({ className, children, variant = 'default', ...props }: { className?: string, children: React.ReactNode, variant?: 'default' | 'secondary' | 'destructive' | 'outline' }) => {
+  const baseClasses = 'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors';
+  const variantClasses = {
+    default: 'bg-primary text-primary-foreground hover:bg-primary/80 border-transparent',
+    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border-transparent',
+    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/80 border-transparent',
+    outline: 'text-foreground',
+  };
+
+  return (
+    <div className={cn(baseClasses, variantClasses[variant], className)} {...props}>
+      {children}
+    </div>
+  );
+};
 import {
   FileTextIcon,
   SearchIcon,
@@ -87,7 +105,7 @@ export default function PasesManagement() {
   }, [searchQuery, activeTab, searchPases, refreshPases])
 
   // Filter pases based on active tab
-  const filteredPases = pases.filter((pase) => {
+  const filteredPases = pases.filter((pase: PaseData) => {
     if (activeTab === "todos") return true
     return pase.estado.toLowerCase() === activeTab
   })
@@ -156,26 +174,46 @@ export default function PasesManagement() {
     switch (estado) {
       case "PENDIENTE":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+          <div className={cn(
+            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+            "bg-yellow-100 text-yellow-800 border-yellow-300"
+          )}>
             Pendiente
-          </Badge>
+          </div>
         )
       case "FIRMADO":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+          <div className={cn(
+            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+            "bg-blue-100 text-blue-800 border-blue-300"
+          )}>
             Firmado
-          </Badge>
+          </div>
         )
       case "AUTORIZADO":
         return (
-          <Badge variant="default" className="bg-green-600">
+          <div className={cn(
+            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+            "bg-green-600 text-white"
+          )}>
             Autorizado
-          </Badge>
+          </div>
         )
       case "RECHAZADO":
-        return <Badge variant="destructive">Rechazado</Badge>
+        return (
+          <div className={cn(
+            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+            "bg-destructive text-destructive-foreground"
+          )}>
+            Rechazado
+          </div>
+        )
       default:
-        return <Badge variant="outline">Desconocido</Badge>
+        return (
+          <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+            Desconocido
+          </div>
+        )
     }
   }
 
@@ -268,12 +306,12 @@ export default function PasesManagement() {
       </div>
 
       {/* Search */}
-      <div className="relative">
+      <div className="relative mb-6">
         <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
         <Input
           placeholder="Buscar pases por folio, operador, placa, razón social..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
           className="pl-10"
         />
       </div>
@@ -285,24 +323,44 @@ export default function PasesManagement() {
             <div className="px-4 pt-4">
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="todos">
-                  Todos
-                  <Badge className="ml-2 bg-gray-500">{pases.length}</Badge>
+                  <span className="flex items-center">
+                    Todos
+                    <Badge variant="secondary" className="ml-2">
+                      {pases.length}
+                    </Badge>
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger value="pendiente">
-                  Pendientes
-                  <Badge className="ml-2 bg-yellow-500">{pases.filter((p) => p.estado === "PENDIENTE").length}</Badge>
+                  <span className="flex items-center">
+                    Pendientes
+                    <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800 border-yellow-300">
+                      {pases.filter((p: PaseData) => p.estado === "PENDIENTE").length}
+                    </Badge>
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger value="firmado">
-                  Firmados
-                  <Badge className="ml-2 bg-blue-500">{pases.filter((p) => p.estado === "FIRMADO").length}</Badge>
+                  <span className="flex items-center">
+                    Firmados
+                    <Badge className="ml-2 bg-blue-500">
+                      {pases.filter((p: PaseData) => p.estado === "FIRMADO").length}
+                    </Badge>
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger value="autorizado">
-                  Autorizados
-                  <Badge className="ml-2 bg-green-500">{pases.filter((p) => p.estado === "AUTORIZADO").length}</Badge>
+                  <span className="flex items-center">
+                    Autorizados
+                    <Badge className="ml-2 bg-green-500">
+                      {pases.filter((p: PaseData) => p.estado === "AUTORIZADO").length}
+                    </Badge>
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger value="rechazado">
-                  Rechazados
-                  <Badge className="ml-2 bg-red-500">{pases.filter((p) => p.estado === "RECHAZADO").length}</Badge>
+                  <span className="flex items-center">
+                    Rechazados
+                    <Badge className="ml-2 bg-red-500">
+                      {pases.filter((p: PaseData) => p.estado === "RECHAZADO").length}
+                    </Badge>
+                  </span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -323,7 +381,7 @@ export default function PasesManagement() {
                   </TableHeader>
                   <TableBody>
                     {filteredPases.length > 0 ? (
-                      filteredPases.map((pase) => (
+                      filteredPases.map((pase: PaseData) => (
                         <TableRow key={pase.id}>
                           <TableCell className="font-medium">{pase.folio}</TableCell>
                           <TableCell>{new Date(pase.fecha).toLocaleDateString()}</TableCell>
@@ -343,38 +401,40 @@ export default function PasesManagement() {
                                 Ver/Editar
                               </Button>
 
-                              {pase.estado === "FIRMADO" && (
-                                <>
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={() => handleAutorizar(pase.id!, true)}
-                                    className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
-                                  >
-                                    <CheckCircleIcon className="h-3 w-3" />
-                                    Autorizar
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleAutorizar(pase.id!, false)}
-                                    className="flex items-center gap-1"
-                                  >
-                                    <XCircleIcon className="h-3 w-3" />
-                                    Rechazar
-                                  </Button>
-                                </>
-                              )}
+                              <div className="flex gap-2">
+                                {pase.estado === "FIRMADO" && (
+                                  <>
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={() => pase.id && handleAutorizar(pase.id, true)}
+                                      className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
+                                    >
+                                      <CheckCircleIcon className="h-3 w-3" />
+                                      Autorizar
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => pase.id && handleAutorizar(pase.id, false)}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <XCircleIcon className="h-3 w-3" />
+                                      Rechazar
+                                    </Button>
+                                  </>
+                                )}
 
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => openDeleteDialog(pase.id!)}
-                                className="flex items-center gap-1"
-                              >
-                                <TrashIcon className="h-3 w-3" />
-                                Eliminar
-                              </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => pase.id && openDeleteDialog(pase.id)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <TrashIcon className="h-3 w-3" />
+                                  Eliminar
+                                </Button>
+                              </div>
                             </div>
                           </TableCell>
                         </TableRow>
