@@ -10,20 +10,31 @@ export const apiClient = {
 
     const config: RequestInit = {
       ...options,
+      mode: 'cors', // Ensure CORS mode is enabled
+      credentials: 'include', // Include credentials if needed
       headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         ...options.headers,
       },
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config)
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, config)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        )
+      }
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      return response.json()
+    } catch (error) {
+      console.error('API request failed:', error)
+      throw error
     }
-
-    return response.json()
   },
 
   // Métodos específicos
@@ -35,11 +46,11 @@ export const apiClient = {
   },
 
   async getPases(page = 0, size = 10) {
-    return this.request(`/passes/paginated?page=${page}&size=${size}`)
+    return this.request(`/passes?page=${page}&size=${size}`)
   },
 
   async createPase(paseData: any) {
-    return this.request("/passes", {
+    return this.request("/passes/create", {
       method: "POST",
       body: JSON.stringify(paseData),
     })

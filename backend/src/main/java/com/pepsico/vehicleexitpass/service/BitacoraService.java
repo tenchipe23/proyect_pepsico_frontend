@@ -11,30 +11,43 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@Transactional
+@Transactional(propagation = Propagation.REQUIRES_NEW)
 public class BitacoraService {
     
     @Autowired
     private BitacoraRepository bitacoraRepository;
     
     public void registrarAccion(VehicleExitPass pase, String accion, String detalles) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        User usuario = null;
-        
-        if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
-            UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
-            usuario = new User();
-            usuario.setId(userPrincipal.getId());
+        try {
+            if (pase == null) {
+                throw new IllegalArgumentException("El pase no puede ser nulo");
+            }
+            
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            User usuario = null;
+            
+            if (auth != null && auth.getPrincipal() instanceof UserPrincipal) {
+                UserPrincipal userPrincipal = (UserPrincipal) auth.getPrincipal();
+                if (userPrincipal != null && userPrincipal.getId() != null) {
+                    usuario = new User();
+                    usuario.setId(userPrincipal.getId());
+                }
+            }
+            
+            Bitacora bitacora = new Bitacora(pase, usuario, accion, detalles);
+            bitacoraRepository.save(bitacora);
+        } catch (Exception e) {
+            // Log the error but don't propagate it to avoid rolling back the main transaction
+            System.err.println("Error al registrar en bitácora: " + e.getMessage());
+            e.printStackTrace();
         }
-        
-        Bitacora bitacora = new Bitacora(pase, usuario, accion, detalles);
-        bitacoraRepository.save(bitacora);
     }
     
     public List<Bitacora> getBitacoraPorPase(VehicleExitPass pase) {

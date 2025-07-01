@@ -41,7 +41,7 @@ interface PaseContextType {
   addPase: (pase: Omit<PaseData, "id" | "fechaCreacion">) => Promise<PaseData>
   updatePase: (id: string, updates: Partial<PaseData>) => Promise<void>
   deletePase: (id: string) => Promise<void>
-  getPaseById: (id: string) => Promise<PaseData | null>
+  getPaseById: (id: string) => PaseData | undefined
   refreshPases: (page?: number, size?: number, status?: string, search?: string) => Promise<void>
   signPase: (id: string, signatureData: { signature: string; seal: string }) => Promise<void>
   authorizePase: (id: string) => Promise<void>
@@ -122,11 +122,22 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     async (paseData: Omit<PaseData, "id" | "fechaCreacion">): Promise<PaseData> => {
       try {
         setLoading(true)
-
-        const response = await apiClient.createPass({
+        
+        // Generate a UUID for the new pass
+        const passId = crypto.randomUUID()
+        const now = new Date().toISOString()
+        
+        // Create the pass object with all required fields
+        const newPass = {
           ...paseData,
+          id: passId,
           estado: "PENDIENTE",
-        })
+          fechaCreacion: now,
+          fechaFirma: now, // Initialize with current time
+          fechaAutorizacion: now, // Initialize with current time
+        };
+        
+        const response = await apiClient.createPass(newPass)
 
         if (response.success && response.data) {
           const newPase = response.data as PaseData
@@ -223,20 +234,9 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [toast],
   )
 
-  const getPaseById = useCallback(async (id: string): Promise<PaseData | null> => {
-    try {
-      const response = await apiClient.getPassById(id)
-
-      if (response.success && response.data) {
-        return response.data as PaseData
-      } else {
-        return null
-      }
-    } catch (error) {
-      console.error("Error getting pass by ID:", error)
-      return null
-    }
-  }, [])
+  const getPaseById = useCallback((id: string): PaseData | undefined => {
+    return pases.find((pase) => pase.id === id)
+  }, [pases])
 
   const signPase = useCallback(
     async (id: string, signatureData: { signature: string; seal: string }) => {
@@ -371,16 +371,62 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const getStatistics = useCallback(async () => {
     try {
+      setLoading(true)
+      console.log("Fetching statistics from API...")
+      
+      // Hacer la petición al endpoint corregido
       const response = await apiClient.getPassStatistics()
+      
+      console.log("Statistics API response:", response)
+      
+      // Si la respuesta es exitosa y tiene datos, devolverlos
       if (response.success && response.data) {
-        return response.data
-      }
-      return null
+        const stats = {
+          totalPasses: response.data.totalPasses || 0,
+          pendingPasses: response.data.pendingPasses || 0,
+          signedPasses: response.data.signedPasses || 0,
+          authorizedPasses: response.data.authorizedPasses || 0,
+          rejectedPasses: response.data.rejectedPasses || 0,
+          todayPasses: response.data.todayPasses || 0
+        }
+        console.log("Parsed statistics:", stats)
+        return stats
+      } 
+      
+      // Si hay un error en la respuesta, lanzar el error
+      const errorMessage = response.error || "Error al cargar las estadísticas"
+      console.error("Error in statistics response:", response)
+      throw new Error(errorMessage)
+      
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Error al cargar estadísticas"
       console.error("Error getting statistics:", error)
-      return null
+      
+      // Mostrar notificación de error solo si no es un error de autenticación
+      if (!errorMessage.includes('Unauthorized') && !errorMessage.includes('No authentication token')) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: `No se pudieron cargar las estadísticas: ${errorMessage}`,
+        })
+      }
+      
+      // Devolver valores por defecto
+      const defaultStats = {
+        totalPasses: 0,
+        pendingPasses: 0,
+        signedPasses: 0,
+        authorizedPasses: 0,
+        rejectedPasses: 0,
+        todayPasses: 0
+      }
+      
+      console.log("Returning default statistics due to error")
+      return defaultStats
+    } finally {
+      setLoading(false)
     }
-  }, [])
+  }, [toast])
 
   const value: PaseContextType = {
     pases,

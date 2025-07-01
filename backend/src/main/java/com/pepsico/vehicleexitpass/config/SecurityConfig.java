@@ -17,6 +17,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -55,23 +59,37 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.disable())
+            .cors(cors -> {}) // CORS is configured in CorsConfig
             .csrf(csrf -> csrf.disable())
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
-                .requestMatchers("/passes/create").permitAll() // Allow anonymous pass creation
+                // Public endpoints
+                .requestMatchers(
+                    "/auth/**",
+                    "/actuator/**",
+                    "/h2-console/**",
+                    "/v3/api-docs/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/webjars/**"
+                ).permitAll()
+                // Passes endpoints
+                .requestMatchers("/passes/create").permitAll()
+                .requestMatchers("/passes").authenticated()
+                // Admin endpoints
                 .requestMatchers("/admin/**").hasRole("ADMIN")
+                // Authorization endpoints
                 .requestMatchers("/passes/authorize/**").hasAnyRole("ADMIN", "AUTORIZADOR")
+                // Security endpoints
                 .requestMatchers("/passes/security/**").hasAnyRole("ADMIN", "SEGURIDAD")
+                // All other requests need to be authenticated
                 .anyRequest().authenticated()
             );
         
-        http.authenticationProvider(authenticationProvider());
-        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        // Add JWT token filter
+        http.authenticationProvider(authenticationProvider())
+            .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         
         // For H2 Console
         http.headers(headers -> headers.frameOptions().disable());

@@ -1,3 +1,4 @@
+// This is a Client Component
 "use client"
 
 import React, { useState, useRef, useEffect } from "react"
@@ -16,18 +17,35 @@ import { useToast } from "@/components/ui/use-toast"
 import AppHeader from "@/components/app-header"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import AuthRedirect from "@/components/auth-redirect"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import BackButton from "@/components/back-button"
 import LoadingIndicator from "@/components/loading-indicator"
 import NavigationGuard from "@/components/navigation-guard"
 
-export default function AutorizarPage({ params }: { params: { id: string } }) {
-  // Get the id from params
-  const { id } = params
-  const { getPaseById, updatePase } = usePase()
+// This is the client component that will be rendered
+export default function AutorizarPageWrapper() {
+  const params = useParams()
+  const id = Array.isArray(params.id) ? params.id[0] : params.id
+  
+  if (!id) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <LoadingIndicator />
+      </div>
+    )
+  }
+  
+  return <AutorizarPageClient id={id} />
+}
+
+// Client component that receives the id as a prop
+function AutorizarPageClient({ id }: { id: string }) {
+  const { getPaseById, updatePase, signPase } = usePase()
   const { toast } = useToast()
   const formRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>
   const [activeSection, setActiveSection] = useState<"firma" | "sello" | null>(null)
+  const [signatureData, setSignatureData] = useState<string | null>(null)
+  const [sealData, setSealData] = useState<string | null>(null)
   const [pase, setPase] = useState<ReturnType<typeof getPaseById>>(undefined)
   const [isEditing, setIsEditing] = useState(false)
   const [editFormData, setEditFormData] = useState<Partial<any>>({})
@@ -148,40 +166,70 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
   // Check if the user has permissions to edit
   const canEdit = user?.role === "admin" || user?.role === "autorizador"
 
-  const handleSignatureSave = (signatureData: string) => {
-    try {
-      updatePase(pase.id!, {
-        firma: signatureData,
-      })
-      setPase({ ...pase, firma: signatureData })
-      setActiveSection(null)
-
-      toast({
-        variant: "success",
-        title: "Firma guardada",
-        description: "La firma ha sido guardada correctamente",
-      })
-    } catch (error) {
-      console.error("Error al guardar firma:", error)
+  const handleSignatureSave = (signature: string) => {
+    // Check if pass is in PENDING state before allowing signature
+    if (pase.estado !== 'PENDIENTE') {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo guardar la firma. Intente nuevamente.",
-      })
+        title: "No se puede firmar",
+        description: "Solo se pueden firmar pases en estado PENDIENTE",
+      });
+      return;
     }
-  }
+    
+    setSignatureData(signature);
+    setActiveSection('sello'); // Move to seal input after signature
+    
+    toast({
+      variant: "default",
+      title: "Firma capturada",
+      description: "Ahora ingrese el sello para completar el proceso",
+    });
+  };
 
-  const handleSealSave = (sealData: string) => {
+  const handleSealSave = async (seal: string) => {
+    // Check if pass is in PENDING state before allowing seal
+    if (pase.estado !== 'PENDIENTE') {
+      toast({
+        variant: "destructive",
+        title: "No se puede agregar sello",
+        description: "Solo se pueden agregar sellos a pases en estado PENDIENTE",
+      });
+      return;
+    }
+    
+    setSealData(seal);
+    
     try {
-      updatePase(pase.id!, {
-        sello: sealData,
-      })
-      setPase({ ...pase, sello: sealData })
-      setActiveSection(null)
+      if (!signatureData) {
+        throw new Error("Por favor capture primero la firma");
+      }
+      
+      const signatureDataToSave = {
+        signature: signatureData,
+        seal: seal
+      };
+      
+      // Call the signPass API endpoint and wait for it to complete
+      await signPase(pase.id!, signatureDataToSave);
+      
+      // Update local state after successful API call
+      setPase(prev => ({
+        ...prev!,
+        estado: 'FIRMADO',
+        firma: signatureData,
+        sello: seal,
+        fechaFirma: new Date().toISOString()
+      }));
+      
+      // Reset signature and seal data
+      setSignatureData(null);
+      setSealData(null);
+      setActiveSection(null);
 
       toast({
-        variant: "success",
-        title: "Sello guardado",
+        variant: "default",
+        title: "Firma y sello guardados",
         description: "El sello ha sido guardado correctamente",
       })
     } catch (error) {
@@ -206,18 +254,18 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
 
     try {
       updatePase(pase.id!, {
-        estado: approve ? "firmado" : "rechazado",
+        estado: approve ? "FIRMADO" : "RECHAZADO",
         fechaFirma: new Date().toISOString(),
       })
 
       setPase({
         ...pase,
-        estado: approve ? "firmado" : "rechazado",
+        estado: approve ? "FIRMADO" : "RECHAZADO", // Usa mayúsculas
         fechaFirma: new Date().toISOString(),
       })
 
       toast({
-        variant: approve ? "success" : "destructive",
+        variant: "default", // Cambia "success" por "default"
         title: approve ? "Pase autorizado" : "Pase rechazado",
         description: approve
           ? "El pase ha sido firmado y sellado correctamente"
@@ -250,12 +298,25 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
 
   const handleSaveEdit = () => {
     try {
-      updatePase(pase.id!, editFormData)
-      setPase({ ...pase, ...editFormData })
+      // Ensure the date is properly formatted as ISO string (YYYY-MM-DD)
+      // Default to current date if fecha is not provided
+      const formattedData = {
+        ...editFormData,
+        fecha: editFormData.fecha 
+          ? new Date(editFormData.fecha).toISOString().split('T')[0] 
+          : new Date().toISOString().split('T')[0] // Default to today's date if not provided
+      };
+
+      updatePase(pase.id!, formattedData)
+      setPase(prev => ({
+        ...prev!,
+        ...formattedData,
+        fecha: formattedData.fecha // Ensure fecha is always a string
+      }));
       setIsEditing(false)
 
       toast({
-        variant: "success",
+        variant: "default",
         title: "Cambios guardados",
         description: "Los datos del pase han sido actualizados correctamente",
       })
@@ -282,9 +343,9 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
   const isFormComplete = pase.firma && pase.sello
 
   return (
-    <AuthRedirect allowedRoles={["admin", "autorizador", "seguridad"]}>
+    <AuthRedirect allowedRoles={['AUTORIZADOR', 'ADMIN']}>
       <NavigationGuard when={isEditing || activeSection !== null}>
-        <div className="max-w-4xl mx-auto">
+        <div className="min-h-screen bg-gray-50">
           <AppHeader
             title="Autorización de Pase de Salida"
             description="Agregue firma y sello para autorizar este pase de salida."
@@ -328,29 +389,29 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
                 <div className="text-right flex flex-col items-end gap-1">
                   <Badge
                     variant={
-                      pase.estado === "pendiente"
+                      pase.estado === "PENDIENTE"
                         ? "outline"
-                        : pase.estado === "firmado"
+                        : pase.estado === "FIRMADO"
                           ? "default"
-                          : pase.estado === "autorizado"
-                            ? "success"
+                          : pase.estado === "AUTORIZADO"
+                            ? "default"
                             : "destructive"
                     }
                     className={
-                      pase.estado === "pendiente"
+                      pase.estado === "PENDIENTE"
                         ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                        : pase.estado === "firmado"
+                        : pase.estado === "FIRMADO"
                           ? "bg-blue-600"
-                          : pase.estado === "rechazado"
+                          : pase.estado === "RECHAZADO"
                             ? "bg-red-600"
                             : ""
                     }
                   >
-                    {pase.estado === "pendiente"
+                    {pase.estado === "PENDIENTE"
                       ? "Pendiente"
-                      : pase.estado === "firmado"
+                      : pase.estado === "FIRMADO"
                         ? "Firmado"
-                        : pase.estado === "autorizado"
+                        : pase.estado === "AUTORIZADO"
                           ? "Autorizado"
                           : "Rechazado"}
                   </Badge>
@@ -365,7 +426,7 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
               <CardContent className="p-6">
                 {isEditing ? (
                   // Edit mode
-                  <>
+                  <div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <div>
                         <Label htmlFor="razonSocial">RAZÓN SOCIAL:</Label>
@@ -534,7 +595,7 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
                       <Textarea
                         id="comentarios"
                         name="comentarios"
-                        value={editFormData.comentarios}
+                        value={editFormData.comentarios || ''}
                         onChange={handleEditChange}
                         className="mt-1"
                         rows={2}
@@ -553,10 +614,10 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
                         Guardar Cambios
                       </Button>
                     </div>
-                  </>
+                  </div>
                 ) : (
                   // View mode
-                  <>
+                  <div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <div>
                         <p className="text-sm font-medium mb-1">RAZÓN SOCIAL:</p>
@@ -657,80 +718,99 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
                         <div className="border p-4 rounded-md">
                           <div className="flex justify-between items-center mb-3">
                             <h3 className="font-semibold flex items-center gap-2">
-                              <PenIcon className="h-4 w-4" /> Firma Digital
+                              <PenIcon className="h-4 w-4" /> Firma y Sello Digital
                             </h3>
-                            {pase.firma && activeSection !== "firma" && canAuthorize && (
+                            {(pase.firma || pase.sello) && activeSection === null && canAuthorize && (
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setActiveSection("firma")}
+                                onClick={() => {
+                                  setActiveSection("firma");
+                                  setSignatureData(null);
+                                  setSealData(null);
+                                }}
                               >
-                                Cambiar
+                                {pase.firma && pase.sello ? 'Cambiar' : 'Agregar'}
                               </Button>
                             )}
                           </div>
 
                           {activeSection === "firma" && canAuthorize ? (
-                            <SignaturePad onSave={handleSignatureSave} />
-                          ) : pase.firma ? (
-                            <div className="flex justify-center border bg-white p-2">
-                              <img src={pase.firma || "/placeholder.svg"} alt="Firma digital" className="max-h-32" />
+                            <div className="space-y-4">
+                              <div className="text-center font-medium">Paso 1 de 2: Firma Digital</div>
+                              <SignaturePad onSave={handleSignatureSave} />
+                              <div className="flex justify-end">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setActiveSection(null);
+                                    setSignatureData(null);
+                                  }}
+                                >
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : activeSection === "sello" && canAuthorize ? (
+                            <div className="space-y-4">
+                              <div className="text-center font-medium">Paso 2 de 2: Sello Digital</div>
+                              <SignaturePad onSave={handleSealSave} />
+                              <div className="flex justify-between">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => setActiveSection("firma")}
+                                >
+                                  Atrás
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setActiveSection(null);
+                                    setSignatureData(null);
+                                    setSealData(null);
+                                  }}
+                                >
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : pase.firma && pase.sello ? (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-sm text-gray-500 mb-1">Firma Digital</p>
+                                  <div className="border bg-white p-2 flex justify-center">
+                                    <img src={pase.firma} alt="Firma digital" className="max-h-24" />
+                                  </div>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-500 mb-1">Sello Digital</p>
+                                  <div className="border bg-white p-2 flex justify-center">
+                                    <img src={pase.sello} alt="Sello digital" className="max-h-24" />
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           ) : canAuthorize ? (
-                            <div className="flex justify-center">
+                            <div className="flex flex-col items-center space-y-4 p-4">
+                              <p className="text-center text-gray-600">
+                                Para firmar y sellar el documento, haga clic en el botón de abajo.
+                              </p>
                               <Button
                                 type="button"
                                 onClick={() => setActiveSection("firma")}
                                 className="bg-blue-700 hover:bg-blue-800"
                               >
-                                Agregar Firma
+                                Agregar Firma y Sello
                               </Button>
                             </div>
                           ) : (
                             <div className="flex justify-center p-4 text-gray-500 italic">
-                              <p>Pendiente de firma</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Seal Section */}
-                        <div className="border p-4 rounded-md">
-                          <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-semibold flex items-center gap-2">
-                              <StampIcon className="h-4 w-4" /> Sello Digital
-                            </h3>
-                            {pase.sello && activeSection !== "sello" && canAuthorize && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setActiveSection("sello")}
-                              >
-                                Cambiar
-                              </Button>
-                            )}
-                          </div>
-
-                          {activeSection === "sello" && canAuthorize ? (
-                            <SealUpload onSave={handleSealSave} />
-                          ) : pase.sello ? (
-                            <div className="flex justify-center border bg-white p-2">
-                              <img src={pase.sello || "/placeholder.svg"} alt="Sello digital" className="max-h-32" />
-                            </div>
-                          ) : canAuthorize ? (
-                            <div className="flex justify-center">
-                              <Button
-                                type="button"
-                                onClick={() => setActiveSection("sello")}
-                                className="bg-blue-700 hover:bg-blue-800"
-                              >
-                                Agregar Sello
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex justify-center p-4 text-gray-500 italic">
-                              <p>Pendiente de sello</p>
+                              <p>Pendiente de firma y sello</p>
                             </div>
                           )}
                         </div>
@@ -740,12 +820,12 @@ export default function AutorizarPage({ params }: { params: { id: string } }) {
                         <p>ESTE PASE NO ES VÁLIDO SI NO CONTIENE FIRMA Y SELLO DEL AUTORIZANTE</p>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </CardContent>
             </div>
 
-            {canAuthorize && pase.estado === "pendiente" && !isEditing && (
+            {canAuthorize && pase.estado === "PENDIENTE" && !isEditing && (
               <CardFooter className="bg-gray-50 border-t p-4 flex justify-end gap-2">
                 <Button
                   onClick={() => handleAutorizar(false)}

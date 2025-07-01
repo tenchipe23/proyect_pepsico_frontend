@@ -10,17 +10,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { CheckCircle } from "lucide-react"
-import { usePase } from "@/context/pase-context"
+import type { PaseData } from "@/context/pase-context"
 
 interface SuccessDialogProps {
-  paseId: string | null
+  pase: PaseData | null
   onClose: () => void
 }
 
-export default function SuccessDialog({ paseId, onClose }: SuccessDialogProps) {
-  const { getPaseById } = usePase()
-  const pase = paseId ? getPaseById(paseId) : null
-
+export default function SuccessDialog({ pase, onClose }: SuccessDialogProps) {
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -61,3 +58,4 @@ export default function SuccessDialog({ paseId, onClose }: SuccessDialogProps) {
     </Dialog>
   )
 }
+

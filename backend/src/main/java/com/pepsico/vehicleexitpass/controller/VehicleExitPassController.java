@@ -16,7 +16,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 @RestController
 @RequestMapping("/passes")
@@ -26,35 +29,106 @@ public class VehicleExitPassController {
     @Autowired
     private VehicleExitPassService passService;
     
+    @Autowired
+    private ObjectMapper objectMapper;
+    
+    private String normalizeStatus(String status) {
+        if (status == null) return null;
+        
+        // Convert to lowercase and handle Spanish plural forms
+        String normalized = status.toLowerCase();
+        
+        // Map Spanish plural forms to singular
+        Map<String, String> statusMap = Map.of(
+            "pendientes", "pendiente",
+            "firmados", "firmado",
+            "autorizados", "autorizado",
+            "rechazados", "rechazado"
+        );
+        
+        return statusMap.getOrDefault(normalized, normalized);
+    }
+    
+    private ResponseEntity<String> createErrorResponse(String message, HttpStatus status) {
+        Map<String, Object> errorResponse = new LinkedHashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", status.getReasonPhrase());
+        errorResponse.put("message", message);
+        
+        try {
+            return ResponseEntity.status(status)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(objectMapper.writeValueAsString(errorResponse));
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
+                .body("Error creating error response: " + e.getMessage());
+        }
+    }
+    
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<Page<VehicleExitPassDto>> getAllPasses(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "fechaCreacion") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir,
+    public ResponseEntity<?> getAllPasses(
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size,
+            @RequestParam(required = false, defaultValue = "fechaCreacion") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDir,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status) {
         
-        Sort sort = sortDir.equalsIgnoreCase("desc") ? 
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        
-        Page<VehicleExitPassDto> passes;
-        
-        if (status != null && search != null && !search.isEmpty()) {
-            PassStatus passStatus = PassStatus.valueOf(status.toUpperCase());
-            passes = passService.searchPassesByStatus(passStatus, search, pageable);
-        } else if (status != null) {
-            PassStatus passStatus = PassStatus.valueOf(status.toUpperCase());
-            passes = passService.getPassesByStatus(passStatus, pageable);
-        } else if (search != null && !search.isEmpty()) {
-            passes = passService.searchPasses(search, pageable);
-        } else {
-            passes = passService.getAllPasses(pageable);
+        try {
+            // Set default values if not provided
+            page = page != null ? page : 0;
+            size = size != null ? size : 10;
+            sortBy = sortBy != null ? sortBy : "fechaCreacion";
+            sortDir = sortDir != null ? sortDir : "desc";
+            
+            // Validate sort direction
+            if (!sortDir.equalsIgnoreCase("asc") && !sortDir.equalsIgnoreCase("desc")) {
+                return createErrorResponse("Invalid sort direction. Use 'asc' or 'desc'.", HttpStatus.BAD_REQUEST);
+            }
+            
+            Sort sort = sortDir.equalsIgnoreCase("desc") ? 
+                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+            Pageable pageable = PageRequest.of(page, size, sort);
+            
+            Page<VehicleExitPassDto> passes;
+            
+            if (status != null && search != null && !search.isEmpty()) {
+                try {
+                    String normalizedStatus = normalizeStatus(status);
+                    PassStatus passStatus = PassStatus.valueOf(normalizedStatus.toUpperCase());
+                    passes = passService.searchPassesByStatus(passStatus, search, pageable);
+                } catch (IllegalArgumentException e) {
+                    return createErrorResponse("Invalid status value: " + status + ". Valid values are: pendiente, firmado, autorizado, rechazado", HttpStatus.BAD_REQUEST);
+                }
+            } else if (status != null) {
+                try {
+                    String normalizedStatus = normalizeStatus(status);
+                    PassStatus passStatus = PassStatus.valueOf(normalizedStatus.toUpperCase());
+                    passes = passService.getPassesByStatus(passStatus, pageable);
+                } catch (IllegalArgumentException e) {
+                    return createErrorResponse("Invalid status value: " + status + ". Valid values are: pendiente, firmado, autorizado, rechazado", HttpStatus.BAD_REQUEST);
+                }
+            } else if (search != null && !search.isEmpty()) {
+                try {
+                    passes = passService.searchPasses(search, pageable);
+                } catch (Exception e) {
+                    return createErrorResponse("Error searching passes: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            } else {
+                try {
+                    passes = passService.getAllPasses(pageable);
+                } catch (Exception e) {
+                    return createErrorResponse("Error retrieving passes: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            }
+            
+            return ResponseEntity.ok(passes);
+        } catch (Exception e) {
+            return createErrorResponse("An unexpected error occurred: " + e.getMessage(), 
+                HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        
-        return ResponseEntity.ok(passes);
     }
     
     @GetMapping("/{id}")
@@ -118,12 +192,29 @@ public class VehicleExitPassController {
         return ResponseEntity.ok().body("{\"message\": \"Pass deleted successfully!\"}");
     }
     
+    @GetMapping("/stats/count-by-status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
+    public ResponseEntity<Map<String, Long>> getPassCountByStatus() {
+        Map<String, Long> counts = new HashMap<>();
+        
+        for (PassStatus status : PassStatus.values()) {
+            long count = passService.getPassCountByStatus(status);
+            counts.put(status.name().toLowerCase(), count);
+        }
+        
+        return ResponseEntity.ok(counts);
+    }
+    
     @GetMapping("/stats/count-by-status/{status}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<Long> getPassCountByStatus(@PathVariable String status) {
-        PassStatus passStatus = PassStatus.valueOf(status.toUpperCase());
-        long count = passService.getPassCountByStatus(passStatus);
-        return ResponseEntity.ok(count);
+    public ResponseEntity<?> getPassCountBySpecificStatus(@PathVariable String status) {
+        try {
+            PassStatus passStatus = PassStatus.valueOf(status.toUpperCase());
+            long count = passService.getPassCountByStatus(passStatus);
+            return ResponseEntity.ok(count);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("{\"error\": \"Invalid status: " + status + "\"}");
+        }
     }
     
     @GetMapping("/stats/count-created-today")

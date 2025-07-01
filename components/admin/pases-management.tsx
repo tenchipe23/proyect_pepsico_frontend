@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePase, type PaseData } from "@/context/pase-context"
+import { useToast } from "@/components/ui/use-toast"
 import {
   FileTextIcon,
   SearchIcon,
@@ -26,6 +27,7 @@ import LoadingIndicator from "@/components/loading-indicator"
 export default function PasesManagement() {
   const router = useRouter()
   const { pases, loading, authorizePase, rejectPase, deletePase, refreshPases, searchPases, getStatistics } = usePase()
+  const { toast } = useToast()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("todos")
@@ -33,14 +35,43 @@ export default function PasesManagement() {
   const [currentPaseId, setCurrentPaseId] = useState<string | null>(null)
   const [statistics, setStatistics] = useState<any>(null)
 
-  // Load statistics on mount
+  // Load statistics on mount and when pases change
   useEffect(() => {
+    let isMounted = true
+    
     const loadStats = async () => {
-      const stats = await getStatistics()
-      setStatistics(stats)
+      try {
+        console.log("Loading statistics...")
+        const stats = await getStatistics()
+        console.log("Statistics loaded:", stats)
+        
+        if (isMounted) {
+          setStatistics(stats)
+        }
+      } catch (error) {
+        console.error("Error loading statistics:", error)
+        // Set default values if there's an error
+        if (isMounted) {
+          console.log("Setting default statistics due to error")
+          setStatistics({
+            totalPasses: 0,
+            pendingPasses: 0,
+            signedPasses: 0,
+            authorizedPasses: 0,
+            rejectedPasses: 0,
+            todayPasses: 0
+          })
+        }
+      }
     }
+    
     loadStats()
-  }, [getStatistics])
+    
+    // Cleanup function
+    return () => {
+      isMounted = false
+    }
+  }, [getStatistics]) // Removed pases from dependencies to avoid infinite loops
 
   // Debounced search
   useEffect(() => {
@@ -67,16 +98,37 @@ export default function PasesManagement() {
 
   const handleAutorizar = async (id: string, autorizar: boolean) => {
     try {
+      console.log(`${autorizar ? 'Autorizando' : 'Rechazando'} pase:`, id)
+      
       if (autorizar) {
         await authorizePase(id)
       } else {
         await rejectPase(id)
       }
-      // Refresh statistics
+      
+      console.log("Pase actualizado, actualizando estadísticas...")
+      
+      // Forzar actualización de la lista de pases
+      await refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase())
+      
+      // Actualizar estadísticas
       const stats = await getStatistics()
+      console.log("Estadísticas actualizadas:", stats)
       setStatistics(stats)
+      
+      // Mostrar notificación de éxito
+      toast({
+        title: `Pase ${autorizar ? 'autorizado' : 'rechazado'} exitosamente`,
+        description: `El pase ha sido ${autorizar ? 'autorizado' : 'rechazado'}.`,
+      })
+      
     } catch (error) {
       console.error("Error al procesar pase:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `No se pudo ${autorizar ? 'autorizar' : 'rechazar'} el pase: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+      })
     }
   }
 
@@ -138,55 +190,82 @@ export default function PasesManagement() {
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pases</CardTitle>
-              <ClipboardListIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.totalPasses || 0}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-              <ClockIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.pendingPasses || 0}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Firmados</CardTitle>
-              <FileTextIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.signedPasses || 0}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Autorizados</CardTitle>
-              <CheckIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.authorizedPasses || 0}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rechazados</CardTitle>
-              <AlertTriangleIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.rejectedPasses || 0}</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* Total Pases */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Pases</CardTitle>
+            <ClipboardListIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {statistics ? (
+              <div className="text-2xl font-bold">{statistics.totalPasses}</div>
+            ) : (
+              <div className="h-8 w-12 bg-gray-200 rounded animate-pulse" />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pendientes */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
+            <ClockIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {statistics ? (
+              <div className="text-2xl font-bold">{statistics.pendingPasses}</div>
+            ) : (
+              <div className="h-8 w-12 bg-gray-200 rounded animate-pulse" />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Firmados */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Firmados</CardTitle>
+            <FileTextIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {statistics ? (
+              <div className="text-2xl font-bold">{statistics.signedPasses}</div>
+            ) : (
+              <div className="h-8 w-12 bg-gray-200 rounded animate-pulse" />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Autorizados */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Autorizados</CardTitle>
+            <CheckIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {statistics ? (
+              <div className="text-2xl font-bold">{statistics.authorizedPasses}</div>
+            ) : (
+              <div className="h-8 w-12 bg-gray-200 rounded animate-pulse" />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Rechazados */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rechazados</CardTitle>
+            <AlertTriangleIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {statistics ? (
+              <div className="text-2xl font-bold">{statistics.rejectedPasses}</div>
+            ) : (
+              <div className="h-8 w-12 bg-gray-200 rounded animate-pulse" />
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Search */}
       <div className="relative">

@@ -22,13 +22,36 @@ export default function LoginPage() {
     password: "",
   })
 
-  // Redirect if already authenticated
+  // Handle session expiration and authentication state
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const redirectPath = searchParams.get("redirect") || getDefaultRedirectPath(user.role)
-      router.push(redirectPath)
+    // Don't run this effect if we're still loading auth state
+    if (loading) return;
+
+    const sessionExpired = searchParams.get('session') === 'expired';
+    const redirectPath = searchParams.get("redirect") || '';
+    
+    // If session expired, show message and clean URL
+    if (sessionExpired) {
+      setError('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+      // Clean the URL without causing a re-render
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('session');
+      window.history.replaceState({}, '', cleanUrl.toString());
+      return;
     }
-  }, [isAuthenticated, user, router, searchParams])
+    
+    // If user is authenticated and not in the middle of login, redirect
+    if (isAuthenticated && user && !isLoggingIn) {
+      // Only redirect if we have a valid path and we're not already there
+      const targetPath = redirectPath || getDefaultRedirectPath(user.role);
+      const currentPath = window.location.pathname + window.location.search;
+      
+      if (targetPath && !currentPath.includes(targetPath)) {
+        console.log('Redirecting to:', targetPath);
+        router.replace(targetPath);
+      }
+    }
+  }, [isAuthenticated, user, loading, router, searchParams, isLoggingIn]);
 
   const getDefaultRedirectPath = (role: string) => {
     switch (role) {

@@ -4,13 +4,24 @@ import com.pepsico.vehicleexitpass.entity.PassStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonSetter;
 
 public class VehicleExitPassDto {
     private String id;
     private String folio;
     private PassStatus estado;
     private String razonSocial;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate fecha;
+    
+    // For JSON deserialization
+    @JsonSetter("fecha")
+    public void setFechaFromString(String dateString) {
+        if (dateString != null) {
+            this.fecha = LocalDate.parse(dateString);
+        }
+    }
     private String tractorEco;
     private String tractorPlaca;
     private String comentarios;

@@ -107,70 +107,135 @@ public class VehicleExitPassService {
         return passMapper.toDto(savedPass);
     }
     
+    @Transactional
     public VehicleExitPassDto updatePass(String id, VehicleExitPassDto passDto) {
-        VehicleExitPass existingPass = passRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-        
-        // Update fields
-        existingPass.setRazonSocial(passDto.getRazonSocial());
-        existingPass.setFecha(passDto.getFecha());
-        existingPass.setTractorEco(passDto.getTractorEco());
-        existingPass.setTractorPlaca(passDto.getTractorPlaca());
-        existingPass.setComentarios(passDto.getComentarios());
-        
-        VehicleExitPass updatedPass = passRepository.save(existingPass);
-        bitacoraService.registrarAccion(updatedPass, "ACTUALIZACION", "Pase actualizado");
-        return passMapper.toDto(updatedPass);
+        try {
+            VehicleExitPass existingPass = passRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
+            
+            // Update fields
+            existingPass.setRazonSocial(passDto.getRazonSocial());
+            existingPass.setFecha(passDto.getFecha());
+            existingPass.setTractorEco(passDto.getTractorEco());
+            existingPass.setTractorPlaca(passDto.getTractorPlaca());
+            
+            if (passDto.getComentarios() != null) {
+                existingPass.setComentarios(passDto.getComentarios());
+            }
+            
+            VehicleExitPass updatedPass = passRepository.save(existingPass);
+            
+            // This will now run in a separate transaction
+            try {
+                bitacoraService.registrarAccion(updatedPass, "ACTUALIZACION", "Pase actualizado");
+            } catch (Exception e) {
+                // Log the error but don't fail the main operation
+                System.err.println("Error al registrar en bitácora: " + e.getMessage());
+            }
+            
+            return passMapper.toDto(updatedPass);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al actualizar el pase: " + e.getMessage(), e);
+        }
     }
     
+    @Transactional
     public VehicleExitPassDto signPass(String id, String signature, String seal) {
-        VehicleExitPass pass = passRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-        
-        if (pass.getEstado() != PassStatus.PENDIENTE) {
-            throw new RuntimeException("Pass can only be signed when in PENDIENTE status");
+        try {
+            VehicleExitPass pass = passRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
+            
+            if (pass.getEstado() != PassStatus.PENDIENTE) {
+                throw new IllegalStateException("El pase solo puede ser firmado cuando está en estado PENDIENTE");
+            }
+            
+            if (signature == null || signature.trim().isEmpty()) {
+                throw new IllegalArgumentException("La firma es requerida");
+            }
+            
+            if (seal == null || seal.trim().isEmpty()) {
+                throw new IllegalArgumentException("El sello es requerido");
+            }
+            
+            pass.setFirma(signature);
+            pass.setSello(seal);
+            pass.setEstado(PassStatus.FIRMADO);
+            pass.setFechaFirma(LocalDateTime.now());
+            
+            VehicleExitPass updatedPass = passRepository.save(pass);
+            
+            try {
+                bitacoraService.registrarAccion(updatedPass, "FIRMA", "Pase firmado con sello digital");
+            } catch (Exception e) {
+                System.err.println("Error al registrar en bitácora: " + e.getMessage());
+            }
+            
+            return passMapper.toDto(updatedPass);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al firmar el pase: " + e.getMessage(), e);
         }
-        
-        pass.setFirma(signature);
-        pass.setSello(seal);
-        pass.setEstado(PassStatus.FIRMADO);
-        pass.setFechaFirma(LocalDateTime.now());
-        
-        VehicleExitPass updatedPass = passRepository.save(pass);
-        bitacoraService.registrarAccion(updatedPass, "FIRMA", "Pase firmado con sello digital");
-        return passMapper.toDto(updatedPass);
     }
     
+    @Transactional
     public VehicleExitPassDto authorizePass(String id) {
-        VehicleExitPass pass = passRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-        
-        if (pass.getEstado() != PassStatus.FIRMADO) {
-            throw new RuntimeException("Pass can only be authorized when in FIRMADO status");
+        try {
+            VehicleExitPass pass = passRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el pase con id: " + id));
+            
+            if (pass.getEstado() != PassStatus.FIRMADO) {
+                throw new IllegalStateException("El pase solo puede ser autorizado cuando está en estado FIRMADO");
+            }
+            
+            pass.setEstado(PassStatus.AUTORIZADO);
+            pass.setFechaAutorizacion(LocalDateTime.now());
+            
+            VehicleExitPass updatedPass = passRepository.save(pass);
+            
+            try {
+                bitacoraService.registrarAccion(updatedPass, "AUTORIZACION", "Pase autorizado");
+            } catch (Exception e) {
+                System.err.println("Error al registrar en bitácora: " + e.getMessage());
+            }
+            
+            return passMapper.toDto(updatedPass);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al autorizar el pase: " + e.getMessage(), e);
         }
-        
-        pass.setEstado(PassStatus.AUTORIZADO);
-        pass.setFechaAutorizacion(LocalDateTime.now());
-        
-        VehicleExitPass updatedPass = passRepository.save(pass);
-        bitacoraService.registrarAccion(updatedPass, "AUTORIZACION", "Pase autorizado");
-        return passMapper.toDto(updatedPass);
     }
     
+    @Transactional
     public VehicleExitPassDto rejectPass(String id, String reason) {
-        VehicleExitPass pass = passRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
-        
-        if (pass.getEstado() == PassStatus.AUTORIZADO) {
-            throw new RuntimeException("Cannot reject an already authorized pass");
+        try {
+            if (reason == null || reason.trim().isEmpty()) {
+                throw new IllegalArgumentException("La razón del rechazo es requerida");
+            }
+            
+            VehicleExitPass pass = passRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró el pase con id: " + id));
+            
+            if (pass.getEstado() == PassStatus.AUTORIZADO) {
+                throw new IllegalStateException("No se puede rechazar un pase que ya ha sido autorizado");
+            }
+            
+            pass.setEstado(PassStatus.RECHAZADO);
+            
+            // Append the rejection reason to the comments
+            String comments = pass.getComentarios() != null ? pass.getComentarios() : "";
+            pass.setComentarios(comments + (comments.isEmpty() ? "" : "\n\n") + 
+                "[RECHAZO " + LocalDateTime.now() + "] " + reason);
+            
+            VehicleExitPass updatedPass = passRepository.save(pass);
+            
+            try {
+                bitacoraService.registrarAccion(updatedPass, "RECHAZO", "Pase rechazado: " + reason);
+            } catch (Exception e) {
+                System.err.println("Error al registrar en bitácora: " + e.getMessage());
+            }
+            
+            return passMapper.toDto(updatedPass);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al rechazar el pase: " + e.getMessage(), e);
         }
-        
-        pass.setEstado(PassStatus.RECHAZADO);
-        pass.setComentarios(pass.getComentarios() + "\n\nRechazado: " + reason);
-        
-        VehicleExitPass updatedPass = passRepository.save(pass);
-        bitacoraService.registrarAccion(updatedPass, "RECHAZO", "Pase rechazado: " + reason);
-        return passMapper.toDto(updatedPass);
     }
     
     public void deletePass(String id) {

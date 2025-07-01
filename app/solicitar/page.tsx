@@ -14,7 +14,7 @@ import SuccessDialog from "@/components/success-dialog"
 export default function SolicitarPage() {
   const { addPase, loading } = usePase()
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
-  const [lastPaseId, setLastPaseId] = useState<string | null>(null)
+  const [lastPase, setLastPase] = useState<PaseData | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState<Omit<PaseData, "id" | "firma" | "sello" | "fechaCreacion" | "estado">>({
@@ -35,8 +35,6 @@ export default function SolicitarPage() {
     ecoDolly: "",
     placasDolly: "",
     comentarios: "",
-    firma: "",
-    sello: "",
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -94,14 +92,11 @@ export default function SolicitarPage() {
       // Create new pass
       const newPase = await addPase({
         ...formData,
-        estado: "pendiente",
-        firma: "",
-        sello: "",
-        fechaCreacion: new Date().toISOString(),
+        estado: "PENDIENTE",
       })
 
       // Save the ID for the success dialog
-      setLastPaseId(newPase.id || null)
+      setLastPase(newPase)
 
       // Show success dialog
       setShowSuccessDialog(true)
@@ -382,7 +377,9 @@ export default function SolicitarPage() {
       </div>
 
       {/* Success Dialog */}
-      {showSuccessDialog && <SuccessDialog paseId={lastPaseId} onClose={handleCloseSuccessDialog} />}
+      {showSuccessDialog && lastPase && (
+        <SuccessDialog pase={lastPase} onClose={handleCloseSuccessDialog} />
+      )}
     </div>
   )
 }

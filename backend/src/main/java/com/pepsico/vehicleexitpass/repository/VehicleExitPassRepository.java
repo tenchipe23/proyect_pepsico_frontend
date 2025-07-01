@@ -31,9 +31,11 @@ public interface VehicleExitPassRepository extends JpaRepository<VehicleExitPass
            "LOWER(p.razonSocial) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(p.tractorEco) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(p.tractorPlaca) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(p.operadorNombre) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(p.operadorApellidoPaterno) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(p.operadorApellidoMaterno) LIKE LOWER(CONCAT('%', :search, '%'))")
+           "(p.operador IS NOT NULL AND (" +
+           "  LOWER(p.operador.nombre) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(p.operador.apellido) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(p.operador.email) LIKE LOWER(CONCAT('%', :search, '%'))" +
+           "))")
     Page<VehicleExitPass> findWithSearch(@Param("search") String search, Pageable pageable);
     
     @Query("SELECT p FROM VehicleExitPass p WHERE p.estado = :estado AND (" +
@@ -41,9 +43,11 @@ public interface VehicleExitPassRepository extends JpaRepository<VehicleExitPass
            "LOWER(p.razonSocial) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(p.tractorEco) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(p.tractorPlaca) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(p.operadorNombre) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(p.operadorApellidoPaterno) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(p.operadorApellidoMaterno) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(p.operador IS NOT NULL AND (" +
+           "  LOWER(p.operador.nombre) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(p.operador.apellido) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(p.operador.email) LIKE LOWER(CONCAT('%', :search, '%'))" +
+           ")))")
     Page<VehicleExitPass> findByEstadoWithSearch(@Param("estado") PassStatus estado, 
                                                 @Param("search") String search, 
                                                 Pageable pageable);
@@ -54,16 +58,12 @@ public interface VehicleExitPassRepository extends JpaRepository<VehicleExitPass
            "LOWER(p.razonSocial) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(p.tractorEco) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(p.tractorPlaca) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.remolque1Eco) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.remolque1Placa) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.remolque2Eco) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.remolque2Placa) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.operadorNombre) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.operadorApellidoPaterno) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.operadorApellidoMaterno) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.ecoDolly) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.placasDolly) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.comentarios) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "CAST(p.estado AS string) LIKE LOWER(CONCAT('%', :query, '%'))")
+           "(p.operador IS NOT NULL AND (" +
+           "  LOWER(p.operador.nombre) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "  LOWER(p.operador.apellido) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "  LOWER(p.operador.email) LIKE LOWER(CONCAT('%', :query, '%'))" +
+           ")) OR " +
+           "LOWER(COALESCE(p.comentarios, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(CAST(p.estado AS string)) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<VehicleExitPass> globalSearch(@Param("query") String query, Pageable pageable);
 }

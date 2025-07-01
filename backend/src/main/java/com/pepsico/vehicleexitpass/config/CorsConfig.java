@@ -29,20 +29,40 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        // Allow multiple origins
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .toList();
         configuration.setAllowedOrigins(origins);
         
-        List<String> methods = Arrays.asList(allowedMethods.split(","));
+        // Allow methods
+        List<String> methods = Arrays.stream(allowedMethods.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .toList();
         configuration.setAllowedMethods(methods);
         
+        // Allow headers
         if ("*".equals(allowedHeaders)) {
             configuration.addAllowedHeader("*");
         } else {
-            List<String> headers = Arrays.asList(allowedHeaders.split(","));
+            List<String> headers = Arrays.stream(allowedHeaders.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
             configuration.setAllowedHeaders(headers);
         }
         
+        // Allow credentials
         configuration.setAllowCredentials(allowCredentials);
+        
+        // Expose headers
+        configuration.setExposedHeaders(Arrays.asList(
+            "Authorization", "Content-Type", "Accept", "X-Total-Count"
+        ));
+        
+        // Set max age
         configuration.setMaxAge(3600L);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

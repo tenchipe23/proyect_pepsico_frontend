@@ -104,4 +104,10 @@ public class UserService {
     }
     
     public long getUserCountByRole(UserRole role) {
-        return userRepository.countByRolAn
+        return userRepository.countByRolAndEstadoTrue(role);
+    }
+    
+    public long getTotalUserCount() {
+        return userRepository.countByEstadoTrue();
+    }
+}

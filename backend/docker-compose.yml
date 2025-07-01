@@ -6,29 +6,37 @@ services:
     container_name: pepsico-postgres
     environment:
       POSTGRES_DB: pepsico_vehicle_pass
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: pepsico_user
+      POSTGRES_PASSWORD: pepsico123
     ports:
-      - "5432:5432"
+      - "5439:5432"  # Changed from 5439:5432 to 5432:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - pepsico-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pepsico_user -d pepsico_vehicle_pass"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: .
     container_name: pepsico-backend
     environment:
-      DB_USERNAME: postgres
-      DB_PASSWORD: password
+      SPRING_PROFILES_ACTIVE: local  # Use local profile
+      DB_USERNAME: pepsico_user       # Match with POSTGRES_USER
+      DB_PASSWORD: pepsico123         # Match with POSTGRES_PASSWORD
       JWT_SECRET: mySecretKey123456789012345678901234567890
       CORS_ORIGINS: http://localhost:3000,http://localhost:3001
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - pepsico-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
