@@ -76,67 +76,149 @@ export default function SealUpload({ onSave }: SealUploadProps) {
   }
 
   return (
-    <Card className="p-4 border border-gray-300">
-      <Tabs defaultValue="upload">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="upload" className="flex items-center gap-2">
+    <div className="w-full">
+      <Tabs defaultValue="upload" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100 p-1 rounded-lg h-auto">
+          <TabsTrigger 
+            value="upload" 
+            className="flex items-center gap-2 py-2 px-4 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 data-[state=active]:font-medium transition-colors"
+          >
             <UploadIcon className="h-4 w-4" />
-            Subir Sello
+            <span>Subir Sello</span>
           </TabsTrigger>
-          <TabsTrigger value="create" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="create" 
+            className="flex items-center gap-2 py-2 px-4 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 data-[state=active]:font-medium transition-colors"
+          >
             <StampIcon className="h-4 w-4" />
-            Crear Sello
+            <span>Crear Sello</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="upload" className="space-y-4">
-          <div className="flex flex-col items-center">
-            <Label htmlFor="seal-upload" className="mb-2">
-              Selecciona una imagen de sello
-            </Label>
-            <Input
-              id="seal-upload"
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              className="max-w-xs"
-            />
-            <p className="text-xs text-gray-500 mt-2">Formatos aceptados: JPG, PNG, GIF</p>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors hover:border-blue-400">
+            <div className="flex flex-col items-center justify-center space-y-3">
+              <div className="p-3 bg-blue-50 rounded-full">
+                <UploadIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <Label htmlFor="seal-upload" className="text-base font-medium text-gray-700 cursor-pointer hover:text-blue-600">
+                  Haz clic para subir una imagen
+                </Label>
+                <p className="text-sm text-gray-500 mt-1">o arrastra y suelta una imagen aquí</p>
+              </div>
+              <Input
+                id="seal-upload"
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <p className="text-xs text-gray-400 mt-2">Formatos: JPG, PNG, GIF (Máx. 5MB)</p>
+            </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="create" className="space-y-4">
-          <div className="space-y-4">
+        <TabsContent value="create" className="space-y-6">
+          <div className="space-y-6">
             <div>
-              <Label htmlFor="seal-text">Texto del sello</Label>
+              <Label htmlFor="seal-text" className="block text-sm font-medium text-gray-700 mb-1">
+                Texto del sello
+              </Label>
               <Input
                 id="seal-text"
                 value={sealText}
                 onChange={(e) => setSealText(e.target.value)}
                 maxLength={15}
-                placeholder="Texto del sello"
+                placeholder="Ej: APROBADO, RECHAZADO"
+                className="w-full p-3 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-md"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                {sealText.length}/15 caracteres
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="seal-color">Color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="seal-color"
-                    type="color"
-                    value={sealColor}
-                    onChange={(e) => setSealColor(e.target.value)}
-                    className="w-12 h-8 p-1"
-                  />
-                  <span className="text-sm">{sealColor}</span>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  Vista previa
+                </Label>
+                <div className="flex justify-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+                  <div 
+                    className="relative w-40 h-40 flex items-center justify-center"
+                    style={{
+                      backgroundImage: 'radial-gradient(#ddd 1px, transparent 1px)',
+                      backgroundSize: '10px 10px',
+                      backgroundPosition: 'center',
+                      borderRadius: '50%',
+                      border: '1px dashed #9ca3af',
+                    }}
+                  >
+                    <div 
+                      className="relative w-32 h-32 rounded-full border-2 flex items-center justify-center text-center p-2"
+                      style={{
+                        borderColor: sealColor,
+                        opacity: sealOpacity,
+                        color: sealColor,
+                        fontWeight: 'bold',
+                        fontSize: '16px',
+                        lineHeight: '1.2',
+                        wordBreak: 'break-word',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {sealText || 'Vista previa'}
+                      <div className="absolute text-xs bottom-2">PEPSICO</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="seal-opacity">Opacidad</Label>
-                <div className="flex items-center gap-2">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="seal-color" className="block text-sm font-medium text-gray-700 mb-1">
+                    Color del sello
+                  </Label>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <div 
+                        className="w-10 h-10 rounded-md cursor-pointer border-2 border-gray-200 flex items-center justify-center"
+                        style={{ backgroundColor: sealColor }}
+                      >
+                        <Input
+                          id="seal-color"
+                          type="color"
+                          value={sealColor}
+                          onChange={(e) => setSealColor(e.target.value)}
+                          className="w-0 h-0 opacity-0 absolute"
+                        />
+                      </div>
+                      <span className="text-sm font-mono text-gray-600">{sealColor.toUpperCase()}</span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1 flex-1">
+                      {['#FF0000', '#0000FF', '#00AA00', '#FFA500', '#800080'].map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          className="w-6 h-6 rounded-full border-2 border-transparent hover:border-gray-400"
+                          style={{ backgroundColor: color }}
+                          onClick={() => setSealColor(color)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <Label htmlFor="seal-opacity" className="block text-sm font-medium text-gray-700">
+                      Opacidad
+                    </Label>
+                    <span className="text-sm font-medium text-gray-600">
+                      {Math.round(sealOpacity * 100)}%
+                    </span>
+                  </div>
                   <Input
                     id="seal-opacity"
                     type="range"
@@ -145,19 +227,23 @@ export default function SealUpload({ onSave }: SealUploadProps) {
                     step="0.1"
                     value={sealOpacity}
                     onChange={(e) => setSealOpacity(Number.parseFloat(e.target.value))}
-                    className="flex-1"
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
-                  <span className="text-sm w-8">{Math.round(sealOpacity * 100)}%</span>
                 </div>
               </div>
             </div>
 
-            <Button type="button" onClick={createTextSeal} className="w-full bg-blue-700 hover:bg-blue-800">
+            <Button 
+              type="button" 
+              onClick={createTextSeal} 
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm transition-colors"
+            >
+              <StampIcon className="h-5 w-5 mr-2" />
               Generar Sello
             </Button>
           </div>
         </TabsContent>
       </Tabs>
-    </Card>
+    </div>
   )
 }

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-06-30T21:05:24-0600",
+    date = "2025-07-14T19:38:24-0600",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 17.0.14 (Eclipse Adoptium)"
 )
 @Component
@@ -25,6 +25,7 @@ public class UserMapperImpl implements UserMapper {
         userDto.setEmail( user.getEmail() );
         userDto.setNombre( user.getNombre() );
         userDto.setApellido( user.getApellido() );
+        userDto.setSegundoApellido( user.getSegundoApellido() );
         userDto.setRol( user.getRol() );
         userDto.setFechaCreacion( user.getFechaCreacion() );
         userDto.setUltimoAcceso( user.getUltimoAcceso() );
@@ -45,6 +46,7 @@ public class UserMapperImpl implements UserMapper {
         user.setEmail( userDto.getEmail() );
         user.setNombre( userDto.getNombre() );
         user.setApellido( userDto.getApellido() );
+        user.setSegundoApellido( userDto.getSegundoApellido() );
         user.setRol( userDto.getRol() );
         user.setEstado( userDto.getEstado() );
 
@@ -61,6 +63,7 @@ public class UserMapperImpl implements UserMapper {
         user.setEmail( userDto.getEmail() );
         user.setNombre( userDto.getNombre() );
         user.setApellido( userDto.getApellido() );
+        user.setSegundoApellido( userDto.getSegundoApellido() );
         user.setRol( userDto.getRol() );
         user.setEstado( userDto.getEstado() );
     }

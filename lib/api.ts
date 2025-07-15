@@ -7,42 +7,70 @@ export const apiClient = {
   // Método para hacer peticiones autenticadas
   async request(endpoint: string, options: RequestInit = {}) {
     const token = localStorage.getItem("token")
+    const url = `${API_BASE_URL}${endpoint}`
+    
+    // Ensure headers object exists
+    const headers = new Headers(options.headers || {})
+    headers.set('Content-Type', 'application/json')
+    
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
 
     const config: RequestInit = {
       ...options,
+      headers: Object.fromEntries(headers.entries()),
+      credentials: 'include', // This is important for sending cookies with CORS
       mode: 'cors', // Ensure CORS mode is enabled
-      credentials: 'include', // Include credentials if needed
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-        ...options.headers,
-      },
     }
 
+    console.log(`[API] ${options.method || 'GET'} ${url}`, { 
+      options: {
+        ...options,
+        body: options.body ? JSON.parse(options.body as string) : undefined,
+      } 
+    });
+
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, config)
+      const response = await fetch(url, config)
+      const responseData = await response.json().catch(() => ({}))
+      
+      console.log(`[API] Response ${response.status} ${url}`, { 
+        status: response.status,
+        statusText: response.statusText,
+        data: responseData,
+        headers: Object.fromEntries(response.headers.entries())
+      });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
         throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
+          responseData.message || 
+          responseData.error || 
+          `HTTP error! status: ${response.status} ${response.statusText}`
         )
       }
 
-      return response.json()
+      return responseData
     } catch (error) {
-      console.error('API request failed:', error)
+      console.error('[API] Request failed:', {
+        url,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      })
       throw error
     }
   },
 
   // Métodos específicos
   async login(email: string, password: string) {
-    return this.request("/auth/login", {
-      method: "POST",
+    return this.request('/auth/login', {
+      method: 'POST',
       body: JSON.stringify({ email, password }),
-    })
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
   },
 
   async getPases(page = 0, size = 10) {

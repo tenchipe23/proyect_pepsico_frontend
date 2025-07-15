@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 public class AuthTokenFilter extends OncePerRequestFilter {
     
@@ -25,6 +26,25 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     private CustomUserDetailsService userDetailsService;
     
     private static final Logger logger = LoggerFactory.getLogger(AuthTokenFilter.class);
+    
+    // Lista de rutas públicas que no requieren autenticación
+    private static final String[] PUBLIC_PATHS = {
+        "/api/auth/login",
+        "/api/auth/verify-token",
+        "/api/auth/debug",
+        "/v3/api-docs/**",
+        "/swagger-ui/**",
+        "/swagger-ui.html",
+        "/webjars/**",
+        "/h2-console/**",
+        "/actuator/**"
+    };
+    
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return Arrays.stream(PUBLIC_PATHS).anyMatch(path::startsWith);
+    }
     
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 

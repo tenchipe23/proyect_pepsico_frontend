@@ -54,6 +54,11 @@ public class VehicleExitPassService {
             .map(passMapper::toDto);
     }
     
+    public Page<VehicleExitPassDto> getPassesByStatusList(List<PassStatus> statusList, Pageable pageable) {
+        return passRepository.findByEstadoIn(statusList, pageable)
+            .map(passMapper::toDto);
+    }
+    
     public Page<VehicleExitPassDto> searchPasses(String search, Pageable pageable) {
         return passRepository.findWithSearch(search, pageable)
             .map(passMapper::toDto);
@@ -194,13 +199,54 @@ public class VehicleExitPassService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
             
             // Update fields
-            existingPass.setRazonSocial(passDto.getRazonSocial());
-            existingPass.setFecha(passDto.getFecha());
-            existingPass.setTractorEco(passDto.getTractorEco());
-            existingPass.setTractorPlaca(passDto.getTractorPlaca());
-            
+            if (passDto.getRazonSocial() != null) {
+                existingPass.setRazonSocial(passDto.getRazonSocial());
+            }
+            if (passDto.getFecha() != null) {
+                existingPass.setFecha(passDto.getFecha());
+            }
+            if (passDto.getTractorEco() != null) {
+                existingPass.setTractorEco(passDto.getTractorEco());
+            }
+            if (passDto.getTractorPlaca() != null) {
+                existingPass.setTractorPlaca(passDto.getTractorPlaca());
+            }
             if (passDto.getComentarios() != null) {
                 existingPass.setComentarios(passDto.getComentarios());
+            }
+            if (passDto.getFirma() != null) {
+                existingPass.setFirma(passDto.getFirma());
+            }
+            if (passDto.getSello() != null) {
+                existingPass.setSello(passDto.getSello());
+            }
+            // Agregar condicionales para otros campos si es necesario
+            if (passDto.getRemolque1Eco() != null) {
+                existingPass.setRemolque1Eco(passDto.getRemolque1Eco());
+            }
+            if (passDto.getRemolque1Placa() != null) {
+                existingPass.setRemolque1Placa(passDto.getRemolque1Placa());
+            }
+            if (passDto.getRemolque2Eco() != null) {
+                existingPass.setRemolque2Eco(passDto.getRemolque2Eco());
+            }
+            if (passDto.getRemolque2Placa() != null) {
+                existingPass.setRemolque2Placa(passDto.getRemolque2Placa());
+            }
+            if (passDto.getEcoDolly() != null) {
+                existingPass.setEcoDolly(passDto.getEcoDolly());
+            }
+            if (passDto.getPlacasDolly() != null) {
+                existingPass.setPlacasDolly(passDto.getPlacasDolly());
+            }
+            if (passDto.getOperadorNombre() != null) {
+                existingPass.setOperadorNombre(passDto.getOperadorNombre());
+            }
+            if (passDto.getOperadorApellidoPaterno() != null) {
+                existingPass.setOperadorApellidoPaterno(passDto.getOperadorApellidoPaterno());
+            }
+            if (passDto.getOperadorApellidoMaterno() != null) {
+                existingPass.setOperadorApellidoMaterno(passDto.getOperadorApellidoMaterno());
             }
             
             VehicleExitPass updatedPass = passRepository.save(existingPass);
@@ -322,9 +368,12 @@ public class VehicleExitPassService {
         VehicleExitPass pass = passRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Pass not found with id: " + id));
         
-        if (pass.getEstado() == PassStatus.AUTORIZADO) {
-            throw new RuntimeException("Cannot delete an authorized pass");
-        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    boolean isAdmin = auth != null && auth.getAuthorities().stream()
+        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    if (!isAdmin && pass.getEstado() == PassStatus.AUTORIZADO) {
+        throw new RuntimeException("Cannot delete an authorized pass");
+    }
         
         passRepository.delete(pass);
     }

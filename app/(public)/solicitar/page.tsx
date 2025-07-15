@@ -198,7 +198,7 @@ export default function SolicitarPage() {
                   </div>
                   <div>
                     <Label htmlFor="tractorPlaca">
-                      PLACA <span className="text-red-500">*</span>
+                      PLACAS <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="tractorPlaca"
@@ -228,7 +228,7 @@ export default function SolicitarPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="remolque1Placa">PLACA</Label>
+                    <Label htmlFor="remolque1Placa">PLACAS</Label>
                     <Input
                       id="remolque1Placa"
                       name="remolque1Placa"
@@ -256,7 +256,7 @@ export default function SolicitarPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="remolque2Placa">PLACA</Label>
+                    <Label htmlFor="remolque2Placa">PLACAS</Label>
                     <Input
                       id="remolque2Placa"
                       name="remolque2Placa"
@@ -270,122 +270,129 @@ export default function SolicitarPage() {
               </div>
             </div>
 
-            <div className="mb-6">
-              <h3 className="font-bold mb-2">OPERADOR:</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="operadorNombre">
-                    NOMBRE(S) <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="operadorNombre"
-                    name="operadorNombre"
-                    value={formData.operadorNombre}
-                    onChange={handleChange}
-                    className="mt-1"
-                    required
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="operadorApellidoPaterno">
-                    APELLIDO PATERNO <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="operadorApellidoPaterno"
-                    name="operadorApellidoPaterno"
-                    value={formData.operadorApellidoPaterno}
-                    onChange={handleChange}
-                    className="mt-1"
-                    required
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="operadorApellidoMaterno">APELLIDO MATERNO</Label>
-                  <Input
-                    id="operadorApellidoMaterno"
-                    name="operadorApellidoMaterno"
-                    value={formData.operadorApellidoMaterno}
-                    onChange={handleChange}
-                    className="mt-1"
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <Label htmlFor="ecoDolly">ECO DOLLY</Label>
-                <Input
-                  id="ecoDolly"
-                  name="ecoDolly"
-                  value={formData.ecoDolly}
-                  onChange={handleChange}
-                  className="mt-1"
-                  disabled={isSubmitting}
-                />
+              <div className="border p-4 rounded-md">
+                <h3 className="font-bold text-center mb-4">OPERADOR</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="operadorNombre">
+                      NOMBRE(S) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="operadorNombre"
+                      name="operadorNombre"
+                      value={formData.operadorNombre}
+                      onChange={handleChange}
+                      className="mt-1"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="operadorApellidoPaterno">
+                      APELLIDO PATERNO <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="operadorApellidoPaterno"
+                      name="operadorApellidoPaterno"
+                      value={formData.operadorApellidoPaterno}
+                      onChange={handleChange}
+                      className="mt-1"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="operadorApellidoMaterno">APELLIDO MATERNO</Label>
+                    <Input
+                      id="operadorApellidoMaterno"
+                      name="operadorApellidoMaterno"
+                      value={formData.operadorApellidoMaterno}
+                      onChange={handleChange}
+                      className="mt-1"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="placasDolly">PLACAS DOLLY</Label>
-                <Input
-                  id="placasDolly"
-                  name="placasDolly"
-                  value={formData.placasDolly}
-                  onChange={handleChange}
-                  className="mt-1"
-                  disabled={isSubmitting}
-                />
+
+              <div className="border p-4 rounded-md">
+                <h3 className="font-bold text-center mb-4">DOLLY</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="ecoDolly">ECO</Label>
+                    <Input
+                      id="ecoDolly"
+                      name="ecoDolly"
+                      value={formData.ecoDolly}
+                      onChange={handleChange}
+                      className="mt-1"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="placasDolly">PLACAS</Label>
+                    <Input
+                      id="placasDolly"
+                      name="placasDolly"
+                      value={formData.placasDolly}
+                      onChange={handleChange}
+                      className="mt-1"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="mb-6">
-              <Label htmlFor="comentarios">COMENTARIOS:</Label>
+              <Label htmlFor="comentarios">COMENTARIOS</Label>
               <Textarea
                 id="comentarios"
                 name="comentarios"
                 value={formData.comentarios}
                 onChange={handleChange}
                 className="mt-1"
-                rows={2}
+                rows={3}
                 disabled={isSubmitting}
               />
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                className="bg-blue-700 hover:bg-blue-800 flex items-center gap-2"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <SendIcon className="h-4 w-4" />
+                    Enviar Solicitud
+                  </>
+                )}
+              </Button>
             </div>
           </form>
         </CardContent>
 
-        <CardFooter className="bg-gray-50 border-t p-4 flex justify-end">
-          <Button
-            type="submit"
-            form="solicitud-form"
-            className="bg-blue-700 hover:bg-blue-800 flex items-center gap-2"
-            disabled={isSubmitting || loading}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2Icon className="h-4 w-4 animate-spin" />
-                Enviando...
-              </>
-            ) : (
-              <>
-                <SendIcon className="h-4 w-4" />
-                Enviar Solicitud
-              </>
-            )}
-          </Button>
+        <CardFooter className="bg-gray-100 p-4 text-center text-sm text-gray-600">
+          <p>
+            Al enviar este formulario, acepta que los datos proporcionados sean utilizados para el proceso de
+            autorización de salida.
+          </p>
         </CardFooter>
       </Card>
 
-      <div className="mt-4 text-white/70 text-sm">
-        <p>
-          Los campos marcados con <span className="text-red-500">*</span> son obligatorios.
-        </p>
-      </div>
-
-      {/* Success Dialog */}
       {showSuccessDialog && lastPase && (
-        <SuccessDialog pase={lastPase} onClose={handleCloseSuccessDialog} />
+        <SuccessDialog
+          onClose={handleCloseSuccessDialog}
+          pase={lastPase}
+        />
       )}
     </div>
   )

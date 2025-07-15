@@ -8,9 +8,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.logging.Logger;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
+    
+    private static final Logger log = Logger.getLogger(CustomUserDetailsService.class.getName());
     
     @Autowired
     private UserRepository userRepository;
@@ -18,10 +21,20 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmailAndEstadoTrue(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
-        
-        return UserPrincipal.create(user);
+        try {
+            User user = userRepository.findByEmailAndEstadoTrue(email)
+                    .orElseThrow(() -> {
+                        log.severe("User not found with email: " + email);
+                        return new UsernameNotFoundException("User not found with email: " + email);
+                    });
+            
+            log.fine("User found with email: " + email);
+            return UserPrincipal.create(user);
+        } catch (Exception e) {
+            log.severe("Error loading user by email: " + email);
+            e.printStackTrace();
+            throw new UsernameNotFoundException("Error loading user with email: " + email, e);
+        }
     }
     
     @Transactional

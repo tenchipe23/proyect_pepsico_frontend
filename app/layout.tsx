@@ -1,41 +1,84 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Toaster } from "@/components/ui/toaster"
-import { AuthProvider } from "@/context/auth-context"
-import { PaseProvider } from "@/context/pase-context"
-import NavigationBreadcrumb from "@/components/navigation-breadcrumb"
-import NavigationGuard from "@/components/navigation-guard"
+'use client';
 
-const inter = Inter({ subsets: ["latin"] })
+import { Inter } from 'next/font/google';
+import { Toaster } from '@/components/ui/toaster';
+import dynamic from 'next/dynamic';
+import { Suspense, useEffect, useState } from 'react';
+import { ThemeProvider } from '@/components/theme-provider';
+import './globals.css';
 
-export const metadata: Metadata = {
-  title: "PepsiCo - Sistema de Pases de Salida",
-  description: "Sistema de gestión de pases de salida de vehículos para PepsiCo",
-    generator: 'v0.dev'
+const inter = Inter({ subsets: ['latin'] });
+
+function LoadingSpinner() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen" suppressHydrationWarning>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-2" suppressHydrationWarning></div>
+      <p className="text-white" suppressHydrationWarning>Cargando aplicación...</p>
+    </div>
+  );
 }
+
+type AuthWrapperProps = {
+  children: React.ReactNode;
+};
+
+const AuthProvider = dynamic(
+  () => import('@/context/auth-context').then((mod) => mod.AuthProvider),
+  { ssr: false }
+);
+
+const PaseProvider = dynamic(
+  () => import('@/context/pase-context').then((mod) => mod.PaseProvider),
+  { ssr: false }
+);
+
+const AuthWrapper = dynamic<AuthWrapperProps>(
+  () => import('./AuthWrapper'),
+  { 
+    ssr: false,
+    loading: () => <div className="flex flex-col items-center justify-center min-h-screen" suppressHydrationWarning>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-2" suppressHydrationWarning></div>
+      <p className="text-white" suppressHydrationWarning>Cargando aplicación...</p>
+    </div>
+  }
+);
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
-    <html lang="es">
-      <body className={inter.className}>
-        <AuthProvider>
-          <PaseProvider>
-            <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700">
-              <div className="container mx-auto px-4 py-8">
-                <NavigationBreadcrumb />
-                <NavigationGuard>{children}</NavigationGuard>
-              </div>
+    <html lang="es" suppressHydrationWarning>
+      <body className={`${inter.className} min-h-screen bg-gradient-to-b from-blue-900 to-blue-800 text-white`} suppressHydrationWarning>
+        <ThemeProvider attribute="class" defaultTheme="light">
+          <div suppressHydrationWarning>
+            <div suppressHydrationWarning>
+              {mounted ? (
+                <AuthProvider>
+                  <PaseProvider>
+                    <AuthWrapper>
+                      <Toaster />
+                      {children}
+                    </AuthWrapper>
+                  </PaseProvider>
+                </AuthProvider>
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-screen" suppressHydrationWarning>
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-2" suppressHydrationWarning></div>
+                  <p className="text-white" suppressHydrationWarning>Cargando aplicación...</p>
+                </div>
+              )}
             </div>
-            <Toaster />
-          </PaseProvider>
-        </AuthProvider>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

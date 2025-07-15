@@ -91,4 +91,52 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+
+  .exporting-pdf .hide-in-pdf,
+  .exporting-pdf [id="modify-button-container"],
+  .exporting-pdf [data-pdf-hide="true"],
+  .exporting-pdf button:has(span:contains("Modificar Firma")),
+  .exporting-pdf button:has(span:contains("Modificar firma")),
+  .pdf-export-in-progress .hide-in-pdf,
+  .pdf-export-in-progress [id="modify-button-container"],
+  .pdf-export-in-progress [data-pdf-hide="true"],
+  .pdf-export-in-progress button:has(span:contains("Modificar Firma")),
+  .pdf-export-in-progress button:has(span:contains("Modificar firma")) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .exporting-pdf .print\:hidden {
+    display: none;
+  }
+
+  .exporting-pdf .hidden.print\:grid {
+    display: grid;
+  }
+
+  .exporting-pdf .print\:bg-blue-50 {
+    background-color: #EFF6FF;
+  }
+
+  .exporting-pdf .print\:border-blue-400 {
+    border-color: #60A5FA;
+  }
+
+  .exporting-pdf .print\:text-blue-800 {
+    color: #1E40AF;
+  }
+
+  .exporting-pdf .print\:font-bold {
+    font-weight: bold;
+  }
+  /* Agregar más reglas para otros print classes según sea necesario */
 }

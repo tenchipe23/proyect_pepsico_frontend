@@ -97,7 +97,7 @@ export default function PasesManagement() {
       if (searchQuery.trim()) {
         searchPases(searchQuery.trim())
       } else {
-        refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase())
+        refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase(), undefined)
       }
     }, 500)
 
@@ -127,7 +127,7 @@ export default function PasesManagement() {
       console.log("Pase actualizado, actualizando estadísticas...")
       
       // Forzar actualización de la lista de pases
-      await refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase())
+      await refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase(), undefined)
       
       // Actualizar estadísticas
       const stats = await getStatistics()
@@ -152,6 +152,11 @@ export default function PasesManagement() {
 
   const handleDeletePase = async () => {
     if (!currentPaseId) return
+
+    const paseToDelete = pases.find(p => p.id === currentPaseId);
+    if (!paseToDelete) return;
+
+
 
     try {
       await deletePase(currentPaseId)
@@ -458,7 +463,7 @@ export default function PasesManagement() {
 
       {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-white text-black p-6 rounded-lg shadow-xl">
           <DialogHeader>
             <DialogTitle>Eliminar Pase de Salida</DialogTitle>
           </DialogHeader>

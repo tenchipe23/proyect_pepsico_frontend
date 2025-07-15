@@ -4,6 +4,8 @@ server:
     context-path: /api
 
 spring:
+  main:
+    allow-bean-definition-overriding: true
   application:
     name: vehicle-exit-pass
   
@@ -33,7 +35,7 @@ spring:
   sql:
     init:
       mode: always
-      data-locations: classpath:data.sql,classpath:update_schema.sql
+      data-locations: classpath:data.sql,classpath:update_schema.sql,classpath:update_schema_segundoApellido.sql
 
 # JWT Configuration
 jwt:
@@ -42,7 +44,7 @@ jwt:
 
 # CORS Configuration
 cors:
-  allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:3001}
+  allowed-origins: http://localhost:3000,http://localhost:3001
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: "*"
   allow-credentials: true

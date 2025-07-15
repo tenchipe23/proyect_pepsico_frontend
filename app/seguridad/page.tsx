@@ -26,7 +26,8 @@ export default function SeguridadPage() {
       if (searchQuery.trim()) {
         searchPases(searchQuery.trim())
       } else {
-        refreshPases(0, 50, "AUTORIZADO") // Only show authorized passes
+        // Cargar tanto pases FIRMADO como AUTORIZADO
+        refreshPases(0, 50, "FIRMADO,AUTORIZADO", undefined) // Show both signed and authorized passes
       }
     }, 500)
 
@@ -49,24 +50,24 @@ export default function SeguridadPage() {
     switch (estado) {
       case "FIRMADO":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+          <Badge variant="outline" className="bg-blue-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">
             Firmado
           </Badge>
         )
       case "AUTORIZADO":
         return (
-          <Badge variant="default" className="bg-green-600">
+          <Badge variant="default" className="bg-green-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">
             Autorizado
           </Badge>
         )
       default:
-        return <Badge variant="outline">Pendiente</Badge>
+        return <Badge variant="outline" className="bg-yellow-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">Pendiente</Badge>
     }
   }
 
   const handleLogout = () => {
     logout()
-    router.push("/login")
+    // La redirección se maneja dentro de la función logout del contexto de autenticación
   }
 
   const handleClearSearch = () => {
@@ -83,14 +84,16 @@ export default function SeguridadPage() {
 
   return (
     <AuthRedirect allowedRoles={["admin", "seguridad"]}>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto py-6">
         <AppHeader
           title="Panel de Seguridad"
           description={`Bienvenido, ${user?.name || "Usuario"}. Aquí puede verificar los pases de salida autorizados.`}
+          titleClassName="text-2xl font-bold text-white"
+          descriptionClassName="text-white/90 mt-2"
           actions={
             <Button
               variant="outline"
-              className="bg-white/10 text-white hover:bg-white/20 flex items-center gap-2"
+              className="bg-blue-600 text-white border-none hover:bg-blue-700 font-medium py-2 px-4 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2"
               onClick={handleLogout}
             >
               <LogOutIcon className="h-4 w-4" />
@@ -99,11 +102,11 @@ export default function SeguridadPage() {
           }
         />
 
-        <Card className="shadow-xl mb-6">
-          <CardHeader className="bg-gray-900 text-white p-4">
-            <h2 className="text-xl font-bold">Buscar Pases de Salida</h2>
+        <Card className="shadow-xl bg-white rounded-xl overflow-hidden mx-auto mb-6">
+          <CardHeader className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-6">
+            <h2 className="text-xl font-bold tracking-tight">Buscar Pases de Salida</h2>
           </CardHeader>
-          <CardContent className="p-4">
+          <CardContent className="p-5">
             <div className="flex gap-4">
               <div className="flex-1 relative">
                 <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -114,42 +117,53 @@ export default function SeguridadPage() {
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline" size="icon" onClick={handleClearSearch} title="Limpiar búsqueda">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleClearSearch} 
+                title="Limpiar búsqueda"
+                className="bg-blue-600 text-white border-none hover:bg-blue-700 rounded-lg shadow-md transition-all duration-200"
+              >
                 <RefreshCwIcon className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl">
-          <CardHeader className="bg-gray-100 p-4 border-b">
+        <Card className="shadow-xl bg-white rounded-xl overflow-hidden mx-auto">
+          <CardHeader className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold">Pases de Salida Autorizados</h2>
-              <Badge className="bg-green-600">{filteredPases.length} pases disponibles</Badge>
+              <h2 className="text-xl font-bold tracking-tight">Pases de Salida Autorizados</h2>
+              <Badge className="bg-green-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">
+                {filteredPases.length} pases disponibles
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {filteredPases.length > 0 ? (
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-blue-50">
                     <TableRow>
-                      <TableHead>Folio</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Operador</TableHead>
-                      <TableHead>Placa</TableHead>
-                      <TableHead>Razón Social</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Fecha Autorización</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
+                      <TableHead className="font-semibold text-blue-800">Folio</TableHead>
+                      <TableHead className="font-semibold text-blue-800">Fecha</TableHead>
+                      <TableHead className="font-semibold text-blue-800">Operador</TableHead>
+                      <TableHead className="font-semibold text-blue-800">Placa</TableHead>
+                      <TableHead className="font-semibold text-blue-800">Razón Social</TableHead>
+                      <TableHead className="font-semibold text-blue-800">Estado</TableHead>
+                      <TableHead className="font-semibold text-blue-800">Fecha Autorización</TableHead>
+                      <TableHead className="text-right font-semibold text-blue-800">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPases.map((pase) => (
-                      <TableRow key={pase.id}>
-                        <TableCell className="font-medium">{pase.folio}</TableCell>
+                    {filteredPases.map((pase, index) => (
+                      <TableRow 
+                        key={pase.id} 
+                        className={index % 2 === 0 ? "bg-white" : "bg-blue-50/50 hover:bg-blue-50"}
+                      >
+                        <TableCell className="font-medium text-blue-800">{pase.folio}</TableCell>
                         <TableCell>{new Date(pase.fecha).toLocaleDateString()}</TableCell>
-                        <TableCell>{`${pase.operadorNombre} ${pase.operadorApellidoPaterno}`}</TableCell>
+                        <TableCell className="font-medium">{`${pase.operadorNombre} ${pase.operadorApellidoPaterno}`}</TableCell>
                         <TableCell>{pase.tractorPlaca}</TableCell>
                         <TableCell>{pase.razonSocial}</TableCell>
                         <TableCell>{getEstadoBadge(pase.estado)}</TableCell>
@@ -165,7 +179,7 @@ export default function SeguridadPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleVerDetalle(pase.id!)}
-                            className="flex items-center gap-1"
+                            className="bg-blue-600 text-white border-none hover:bg-blue-700 font-medium py-1 px-3 rounded-lg shadow-md transition-all duration-200 flex items-center gap-1"
                           >
                             <FileTextIcon className="h-3 w-3" />
                             Ver Detalle
@@ -177,17 +191,19 @@ export default function SeguridadPage() {
                 </Table>
               </div>
             ) : (
-              <div className="p-8 text-center text-gray-500">
-                <p className="mb-2 font-medium">
-                  {searchQuery
-                    ? "No se encontraron pases que coincidan con la búsqueda"
-                    : "No hay pases de salida autorizados"}
-                </p>
-                <p className="text-sm">
-                  {searchQuery
-                    ? "Intente con otros términos de búsqueda"
-                    : "Los pases firmados y autorizados aparecerán aquí."}
-                </p>
+              <div className="p-12 text-center">
+                <div className="bg-blue-50 rounded-xl p-8 shadow-sm border border-blue-100 max-w-lg mx-auto">
+                  <p className="mb-3 font-medium text-blue-800 text-lg">
+                    {searchQuery
+                      ? "No se encontraron pases que coincidan con la búsqueda"
+                      : "No hay pases de salida autorizados"}
+                  </p>
+                  <p className="text-blue-600">
+                    {searchQuery
+                      ? "Intente con otros términos de búsqueda"
+                      : "Los pases firmados y autorizados aparecerán aquí."}
+                  </p>
+                </div>
               </div>
             )}
           </CardContent>

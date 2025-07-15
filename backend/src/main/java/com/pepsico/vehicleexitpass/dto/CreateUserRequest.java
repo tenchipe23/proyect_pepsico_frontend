@@ -15,6 +15,9 @@ public class CreateUserRequest {
     @Size(max = 100)
     private String apellido;
     
+    @Size(max = 100)
+    private String segundoApellido;
+    
     @NotBlank
     @Email
     @Size(max = 100)
@@ -30,9 +33,10 @@ public class CreateUserRequest {
     // Constructors
     public CreateUserRequest() {}
     
-    public CreateUserRequest(String name, String apellido, String email, String password, UserRole role) {
+    public CreateUserRequest(String name, String apellido, String segundoApellido, String email, String password, UserRole role) {
         this.name = name;
         this.apellido = apellido;
+        this.segundoApellido = segundoApellido;
         this.email = email;
         this.password = password;
         this.role = role;
@@ -44,6 +48,9 @@ public class CreateUserRequest {
     
     public String getApellido() { return apellido; }
     public void setApellido(String apellido) { this.apellido = apellido; }
+    
+    public String getSegundoApellido() { return segundoApellido; }
+    public void setSegundoApellido(String segundoApellido) { this.segundoApellido = segundoApellido; }
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

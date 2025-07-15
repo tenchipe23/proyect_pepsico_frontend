@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -18,6 +19,8 @@ public interface VehicleExitPassRepository extends JpaRepository<VehicleExitPass
     Optional<VehicleExitPass> findByFolio(String folio);
     
     Page<VehicleExitPass> findByEstado(PassStatus estado, Pageable pageable);
+    
+    Page<VehicleExitPass> findByEstadoIn(List<PassStatus> estados, Pageable pageable);
     
     long countByEstado(PassStatus estado);
     

@@ -32,7 +32,7 @@ export default function BackButton({ fallbackUrl = "/", className = "" }: BackBu
   return (
     <Button
       variant="outline"
-      className={`bg-white/10 text-white hover:bg-white/20 flex items-center gap-2 ${className}`}
+      className={`bg-blue-600 text-white border-none hover:bg-blue-700 font-medium py-2 px-4 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2 ${className}`}
       onClick={handleBack}
     >
       <ArrowLeftIcon className="h-4 w-4" />

@@ -36,9 +36,11 @@ com/pepsico/vehicleexitpass/service/BitacoraService.class
 com/pepsico/vehicleexitpass/service/VehicleExitPassService.class
 com/pepsico/vehicleexitpass/repository/VehiculoRepository.class
 com/pepsico/vehicleexitpass/entity/PaseVehiculo.class
+com/pepsico/vehicleexitpass/config/WebConfig.class
 com/pepsico/vehicleexitpass/service/AuthService.class
 com/pepsico/vehicleexitpass/mapper/UserMapperImpl.class
 com/pepsico/vehicleexitpass/exception/GlobalExceptionHandler.class
+com/pepsico/vehicleexitpass/security/RequestLoggingFilter.class
 com/pepsico/vehicleexitpass/entity/VehicleExitPass.class
 com/pepsico/vehicleexitpass/entity/PassStatus.class
 com/pepsico/vehicleexitpass/mapper/VehiculoMapper.class

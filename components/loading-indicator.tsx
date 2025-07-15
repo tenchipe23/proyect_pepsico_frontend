@@ -1,4 +1,7 @@
+"use client"
+
 import { Loader2Icon } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface LoadingIndicatorProps {
   text?: string
@@ -7,6 +10,12 @@ interface LoadingIndicatorProps {
 }
 
 export default function LoadingIndicator({ text = "Cargando...", size = "md", className = "" }: LoadingIndicatorProps) {
+  const [isMounted, setIsMounted] = useState(false)
+  
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+  
   const sizeClass = {
     sm: "h-4 w-4",
     md: "h-8 w-8",
@@ -14,9 +23,13 @@ export default function LoadingIndicator({ text = "Cargando...", size = "md", cl
   }[size]
 
   return (
-    <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
-      <Loader2Icon className={`${sizeClass} text-white animate-spin`} />
-      {text && <p className="text-white font-medium">{text}</p>}
+    <div className={`flex flex-col items-center justify-center gap-3 ${className}`} suppressHydrationWarning>
+      {isMounted ? (
+        <>
+          <Loader2Icon className={`${sizeClass} text-white animate-spin`} suppressHydrationWarning />
+          {text && <p className="text-white font-medium" suppressHydrationWarning>{text}</p>}
+        </>
+      ) : null}
     </div>
   )
 }

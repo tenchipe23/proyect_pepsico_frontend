@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-06-30T21:05:26-0600",
+    date = "2025-07-14T19:38:24-0600",
     comments = "version: 1.5.5.Final, compiler: javac, environment: Java 17.0.14 (Eclipse Adoptium)"
 )
 @Component
@@ -45,7 +45,8 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         vehicleExitPassDto.setOperadorNombre( vehicleExitPass.getOperadorNombre() );
         vehicleExitPassDto.setOperadorApellidoPaterno( vehicleExitPass.getOperadorApellidoPaterno() );
         vehicleExitPassDto.setOperadorApellidoMaterno( vehicleExitPass.getOperadorApellidoMaterno() );
-        vehicleExitPassDto.setOperador( userToUserDto( vehicleExitPass.getOperador() ) );
+
+        vehicleExitPassDto.setFechaFromString( vehicleExitPass.getFechaCreacion() != null ? vehicleExitPass.getFechaCreacion().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null );
 
         return vehicleExitPassDto;
     }
@@ -70,6 +71,7 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         vehicleExitPass.setComentarios( vehicleExitPassDto.getComentarios() );
         vehicleExitPass.setFechaFirma( vehicleExitPassDto.getFechaFirma() );
         vehicleExitPass.setFechaAutorizacion( vehicleExitPassDto.getFechaAutorizacion() );
+        vehicleExitPass.setOperador( userDtoToUser( vehicleExitPassDto.getOperador() ) );
         vehicleExitPass.setOperadorNombre( vehicleExitPassDto.getOperadorNombre() );
         vehicleExitPass.setOperadorApellidoPaterno( vehicleExitPassDto.getOperadorApellidoPaterno() );
         vehicleExitPass.setOperadorApellidoMaterno( vehicleExitPassDto.getOperadorApellidoMaterno() );
@@ -79,6 +81,8 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         vehicleExitPass.setRemolque2Placa( vehicleExitPassDto.getRemolque2Placa() );
         vehicleExitPass.setEcoDolly( vehicleExitPassDto.getEcoDolly() );
         vehicleExitPass.setPlacasDolly( vehicleExitPassDto.getPlacasDolly() );
+
+        vehicleExitPass.setFechaCreacion( vehicleExitPassDto.getFechaFromString() != null ? java.time.LocalDateTime.parse(vehicleExitPassDto.getFechaFromString(), java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null );
 
         return vehicleExitPass;
     }
@@ -101,6 +105,15 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         vehicleExitPass.setComentarios( vehicleExitPassDto.getComentarios() );
         vehicleExitPass.setFechaFirma( vehicleExitPassDto.getFechaFirma() );
         vehicleExitPass.setFechaAutorizacion( vehicleExitPassDto.getFechaAutorizacion() );
+        if ( vehicleExitPassDto.getOperador() != null ) {
+            if ( vehicleExitPass.getOperador() == null ) {
+                vehicleExitPass.setOperador( new User() );
+            }
+            userDtoToUser1( vehicleExitPassDto.getOperador(), vehicleExitPass.getOperador() );
+        }
+        else {
+            vehicleExitPass.setOperador( null );
+        }
         vehicleExitPass.setOperadorNombre( vehicleExitPassDto.getOperadorNombre() );
         vehicleExitPass.setOperadorApellidoPaterno( vehicleExitPassDto.getOperadorApellidoPaterno() );
         vehicleExitPass.setOperadorApellidoMaterno( vehicleExitPassDto.getOperadorApellidoMaterno() );
@@ -112,22 +125,39 @@ public class VehicleExitPassMapperImpl implements VehicleExitPassMapper {
         vehicleExitPass.setPlacasDolly( vehicleExitPassDto.getPlacasDolly() );
     }
 
-    protected UserDto userToUserDto(User user) {
-        if ( user == null ) {
+    protected User userDtoToUser(UserDto userDto) {
+        if ( userDto == null ) {
             return null;
         }
 
-        UserDto userDto = new UserDto();
+        User user = new User();
 
-        userDto.setId( user.getId() );
-        userDto.setEmail( user.getEmail() );
-        userDto.setNombre( user.getNombre() );
-        userDto.setApellido( user.getApellido() );
-        userDto.setRol( user.getRol() );
-        userDto.setFechaCreacion( user.getFechaCreacion() );
-        userDto.setUltimoAcceso( user.getUltimoAcceso() );
-        userDto.setEstado( user.getEstado() );
+        user.setId( userDto.getId() );
+        user.setEmail( userDto.getEmail() );
+        user.setNombre( userDto.getNombre() );
+        user.setApellido( userDto.getApellido() );
+        user.setSegundoApellido( userDto.getSegundoApellido() );
+        user.setRol( userDto.getRol() );
+        user.setFechaCreacion( userDto.getFechaCreacion() );
+        user.setUltimoAcceso( userDto.getUltimoAcceso() );
+        user.setEstado( userDto.getEstado() );
 
-        return userDto;
+        return user;
+    }
+
+    protected void userDtoToUser1(UserDto userDto, User mappingTarget) {
+        if ( userDto == null ) {
+            return;
+        }
+
+        mappingTarget.setId( userDto.getId() );
+        mappingTarget.setEmail( userDto.getEmail() );
+        mappingTarget.setNombre( userDto.getNombre() );
+        mappingTarget.setApellido( userDto.getApellido() );
+        mappingTarget.setSegundoApellido( userDto.getSegundoApellido() );
+        mappingTarget.setRol( userDto.getRol() );
+        mappingTarget.setFechaCreacion( userDto.getFechaCreacion() );
+        mappingTarget.setUltimoAcceso( userDto.getUltimoAcceso() );
+        mappingTarget.setEstado( userDto.getEstado() );
     }
 }

@@ -39,6 +39,10 @@ public class User {
     @Column(nullable = false)
     private String apellido;
     
+    @Size(max = 100)
+    @Column(nullable = true)
+    private String segundoApellido;
+    
     @NotBlank
     @Size(min = 6, max = 100)
     @Column(nullable = false)
@@ -73,11 +77,12 @@ public class User {
         this.id = UUID.randomUUID().toString();
     }
     
-    public User(String email, String nombre, String apellido, String password, UserRole rol) {
+    public User(String email, String nombre, String apellido, String segundoApellido, String password, UserRole rol) {
         this();
         this.email = email;
         this.nombre = nombre;
         this.apellido = apellido;
+        this.segundoApellido = segundoApellido;
         this.password = password;
         this.rol = rol;
     }
@@ -94,6 +99,9 @@ public class User {
     
     public String getApellido() { return apellido; }
     public void setApellido(String apellido) { this.apellido = apellido; }
+    
+    public String getSegundoApellido() { return segundoApellido; }
+    public void setSegundoApellido(String segundoApellido) { this.segundoApellido = segundoApellido; }
     
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
@@ -118,6 +126,9 @@ public class User {
     
     // Método para obtener nombre completo
     public String getNombreCompleto() {
+        if (segundoApellido != null && !segundoApellido.isEmpty()) {
+            return nombre + " " + apellido + " " + segundoApellido;
+        }
         return nombre + " " + apellido;
     }
 }

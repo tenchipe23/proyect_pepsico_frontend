@@ -12,9 +12,12 @@ interface PdfExportProps {
   contentRef: React.RefObject<HTMLDivElement>
   fileName?: string
   disabled?: boolean
+  className?: string
+  onStart?: () => void
+  onFinish?: () => void
 }
 
-export default function PdfExport({ contentRef, fileName = "pase-de-salida", disabled = false }: PdfExportProps) {
+export default function PdfExport({ contentRef, fileName = "pase-de-salida", disabled = false, className = "", onStart, onFinish }: PdfExportProps) {
   const [isGenerating, setIsGenerating] = useState(false)
 
   const generatePdf = async () => {
@@ -25,42 +28,147 @@ export default function PdfExport({ contentRef, fileName = "pase-de-salida", dis
 
       // Crear una copia del elemento para manipularlo sin afectar la UI
       const element = contentRef.current
+      
+      // Aplicar estilos temporales para el PDF
+      const originalStyle = element.style.cssText
+      element.style.cssText += `
+        transform: scale(1);
+        transform-origin: center;
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 0;
+        font-size: 12px;
+        line-height: 1.2;
+        box-sizing: border-box;
+      `
 
-      // Configurar opciones para html2canvas
+      // Configurar opciones para html2canvas optimizadas para una página
       const options = {
-        scale: 2, // Mayor escala para mejor calidad
-        useCORS: true, // Permitir imágenes de otros dominios
+        scale: 2.5, // Mayor escala para mejor calidad
+        useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
+        imageTimeout: 5000, // Esperar hasta 5 segundos para cargar imágenes
+        allowTaint: true // Permitir imágenes del mismo origen sin CORS
       }
 
-      // Capturar el contenido como imagen
-      const canvas = await html2canvas(element, options)
+      onStart?.();
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Retraso extendido para permitir re-render y actualización DOM
+      // Crear un clon del elemento para modificarlo sin afectar la UI visible
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.width = `${element.scrollWidth}px`;
+      clone.style.height = `${element.scrollHeight}px`;
+      document.body.appendChild(clone);
 
-      // Calcular dimensiones para el PDF (A4)
-      const imgData = canvas.toDataURL("image/png")
-      const imgWidth = 210 // A4 width in mm
-      const pageHeight = 297 // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      // Ocultar todos los elementos con clase hide-in-pdf en el clon
+      const hideInPdfElements = clone.querySelectorAll('.hide-in-pdf, [data-pdf-hide="true"], #modify-button-container');
+      hideInPdfElements.forEach((element) => {
+        (element as HTMLElement).style.display = 'none';
+        (element as HTMLElement).remove(); // Eliminar completamente del DOM
+      });
+      
+      // Buscar y eliminar específicamente el botón de modificar firma
+      const modifyButtons = clone.querySelectorAll('button');
+      modifyButtons.forEach((button) => {
+        if (button.textContent?.includes('Modificar Firma y Sello') || 
+            button.innerHTML?.includes('Modificar Firma y Sello') || 
+            button.innerHTML?.includes('Modificar Firma y Sello')) {
+          // Eliminar el botón y su contenedor padre
+          let parent = button.parentElement;
+          while (parent && parent.tagName !== 'BODY') {
+            if (parent.id === 'modify-button-container' || parent.classList.contains('hide-in-pdf')) {
+              parent.remove();
+              break;
+            }
+            const nextParent = parent.parentElement;
+            if (!nextParent || nextParent.tagName === 'BODY') {
+              button.remove(); // Si no encontramos un contenedor específico, eliminamos solo el botón
+              break;
+            }
+            parent = nextParent;
+          }
+        }
+      });
+      
+      // Eliminar cualquier elemento que contenga el texto "Modificar Firma"
+      const allElements = clone.querySelectorAll('*');
+      allElements.forEach((el) => {
+        if (el.textContent?.includes('Modificar Firma y Sello') || el.textContent?.includes('Modificar firma y sello')) {
+          el.remove();
+        }
+      });
 
-      // Crear nuevo documento PDF
-      const pdf = new jsPDF("p", "mm", "a4")
+      // Agregar clase al documento para ocultar elementos durante la exportación
+      document.body.classList.add('pdf-export-in-progress');
+      
+      // Capturar el clon como imagen
+      clone.classList.add('exporting-pdf');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Retraso adicional para carga
+      
+      // Ya hemos eliminado los elementos que queremos ocultar en el paso anterior
+      // No necesitamos hacer más eliminaciones aquí
+      
+      const canvas = await html2canvas(clone, options);
+      clone.classList.remove('exporting-pdf');
+      document.body.classList.remove('pdf-export-in-progress');
+      document.body.removeChild(clone);
+      onFinish?.();
+      
+      // Restaurar estilos originales
+      element.style.cssText = originalStyle;
 
-      // Añadir la imagen al PDF
-      let heightLeft = imgHeight
-      let position = 0
+      // Calcular dimensiones para el PDF (Letter) - optimizado para una sola página
+      const imgData = canvas.toDataURL("image/png", 1.0) // Máxima calidad
+      const pdfWidth = 250 // Letter width in mm
+      const pdfHeight = 275 // Letter height in mm
+      const margin = 1 // Margen en mm (reducido para aprovechar más espacio)
+      const contentWidth = pdfWidth - (margin)
+      const contentHeight = pdfHeight - (margin)
+      
+      // Calcular la escala para ajustar a una página
+      const imgWidth = canvas.width
+      const imgHeight = canvas.height
+      const scaleX = contentWidth / (imgWidth * 0.264583) // Convertir px a mm
+      const scaleY = contentHeight / (imgHeight * 0.264583)
+      const scale = Math.min(scaleX, scaleY, 0.98) // Reducir solo un poco para asegurar márgenes
+      
+      const finalWidth = (imgWidth * 0.264583) * scale
+      const finalHeight = (imgHeight * 0.264583) * scale
+      
+      // Centrar el contenido perfectamente
+      const xOffset = margin + (contentWidth - finalWidth) / 2
+      const yOffset = margin
 
-      // Primera página
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
+      // Crear nuevo documento PDF con tamaño Letter
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "letter",
+        compress: true,
+        hotfixes: ["px_scaling"] // Mejora la escala de píxeles
+      })
 
-      // Si el contenido es más largo que una página, añadir más páginas
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
+      // Añadir la imagen centrada al PDF con mejor calidad
+      pdf.addImage(imgData, "PNG", xOffset, yOffset, finalWidth, finalHeight, undefined, 'FAST')
+      
+      // Optimizar el PDF
+      pdf.setProperties({
+        title: `${fileName}`,
+        subject: "Pase de Salida PepsiCo",
+        creator: "Sistema de Pases PepsiCo",
+        keywords: "pase, salida, pepsico"
+      })
 
       // Guardar el PDF
       pdf.save(`${fileName}-${new Date().toISOString().split("T")[0]}.pdf`)
@@ -78,7 +186,7 @@ export default function PdfExport({ contentRef, fileName = "pase-de-salida", dis
       onClick={generatePdf}
       disabled={disabled || isGenerating}
       variant="outline"
-      className="flex items-center gap-2"
+      className={`bg-green-600 text-white border-none hover:bg-green-700 font-medium py-2 px-4 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2 ${className} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
     >
       {isGenerating ? (
         <>

@@ -43,6 +43,9 @@ public class CorsConfig {
             .toList();
         configuration.setAllowedMethods(methods);
         
+        // Allow credentials
+        configuration.setAllowCredentials(allowCredentials);
+        
         // Allow headers
         if ("*".equals(allowedHeaders)) {
             configuration.addAllowedHeader("*");

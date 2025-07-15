@@ -17,6 +17,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   RefreshCwIcon,
+  TrashIcon,
 } from "lucide-react"
 import AppHeader from "@/components/app-header"
 import AuthRedirect from "@/components/auth-redirect"
@@ -25,10 +26,13 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { useRouter } from "next/navigation"
 import LoadingIndicator from "@/components/loading-indicator"
+import { useToast } from "@/components/ui/use-toast"
+import { ToastAction } from "@/components/ui/toast"
 
 export default function AutorizadorDashboardPage() {
-  const { pases, loading, authorizePase, rejectPase, refreshPases, searchPases } = usePase()
+  const { pases, loading, authorizePase, rejectPase, deletePase, refreshPases, searchPases } = usePase()
   const { user, logout } = useAuth()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("pendientes")
   const [showNotifications, setShowNotifications] = useState(false)
@@ -40,7 +44,7 @@ export default function AutorizadorDashboardPage() {
       if (searchQuery.trim()) {
         searchPases(searchQuery.trim())
       } else {
-        refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase())
+        refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase(), undefined)
       }
     }, 500)
 
@@ -93,25 +97,48 @@ export default function AutorizadorDashboardPage() {
     router.push(`/autorizar/${id}`)
   }
 
-  const handleQuickAction = async (id: string, action: "autorizar" | "rechazar") => {
+  const handleQuickAction = async (id: string, action: "autorizar" | "rechazar" | "eliminar") => {
     const pase = pases.find((p) => p.id === id)
 
     if (!pase) {
       return
     }
 
-    if (!pase.firma || !pase.sello) {
-      return
+    if (action === "eliminar" && pase.estado === "AUTORIZADO") {
+      // Mostrar mensaje de error
+      // Asumiendo que useToast está disponible, de lo contrario ajustar
+      // Por ahora, usar console.error o alert
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se puede eliminar un pase autorizado.",
+        action: <ToastAction altText="Cerrar">Cerrar</ToastAction>,
+      });
+
+      return;
     }
+
+    // Eliminamos la validación de firma y sello para permitir autorizar pases ya firmados y sellados
+    // if (!pase.firma || !pase.sello) {
+    //   return
+    // }
 
     try {
       if (action === "autorizar") {
         await authorizePase(id)
-      } else {
+      } else if (action === "rechazar") {
         await rejectPase(id)
+      } else if (action === "eliminar") {
+        await deletePase(id)
       }
     } catch (error) {
       console.error(`Error al ${action} pase:`, error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo procesar la acción. Intente nuevamente.",
+        action: <ToastAction altText="Cerrar">Cerrar</ToastAction>,
+      });
     }
   }
 
@@ -119,32 +146,32 @@ export default function AutorizadorDashboardPage() {
     switch (estado) {
       case "PENDIENTE":
         return (
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+          <Badge variant="outline" className="bg-yellow-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">
             Pendiente
           </Badge>
         )
       case "FIRMADO":
         return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+          <Badge variant="outline" className="bg-blue-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">
             Firmado
           </Badge>
         )
       case "AUTORIZADO":
         return (
-          <Badge variant="default" className="bg-green-600">
+          <Badge variant="default" className="bg-green-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">
             Autorizado
           </Badge>
         )
       case "RECHAZADO":
-        return <Badge variant="destructive">Rechazado</Badge>
+        return <Badge variant="destructive" className="border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">Rechazado</Badge>
       default:
-        return <Badge variant="outline">Desconocido</Badge>
+        return <Badge variant="outline" className="bg-gray-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">Desconocido</Badge>
     }
   }
 
   const handleLogout = () => {
     logout()
-    router.push("/login")
+    // La redirección se maneja dentro de la función logout del contexto de autenticación
   }
 
   const handleClearSearch = () => {
@@ -170,17 +197,19 @@ export default function AutorizadorDashboardPage() {
 
   return (
     <AuthRedirect allowedRoles={["admin", "autorizador"]}>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto py-6">
         <AppHeader
           title="Panel de Autorización"
           description={`Bienvenido, ${user?.name || "Usuario"}. Aquí puede autorizar los pases de salida.`}
+          titleClassName="text-2xl font-bold text-white"
+          descriptionClassName="text-white/90 mt-2"
           actions={
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="bg-white/10 text-white hover:bg-white/20 relative"
+                  className="bg-blue-600 text-white border-none hover:bg-blue-700 rounded-lg shadow-md transition-all duration-200 relative"
                   onClick={handleNotificationClick}
                 >
                   <BellIcon className="h-5 w-5" />
@@ -188,13 +217,13 @@ export default function AutorizadorDashboardPage() {
                 </Button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50 overflow-hidden">
-                    <div className="p-3 bg-gray-100 border-b font-medium flex justify-between items-center">
-                      <span>Notificaciones</span>
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl z-50 overflow-hidden border border-blue-100">
+                    <div className="p-3 bg-gradient-to-r from-blue-800 to-blue-600 text-white font-medium flex justify-between items-center">
+                      <span className="text-white font-bold">Notificaciones</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0"
+                        className="h-7 w-7 p-0 text-white hover:bg-blue-700/50"
                         onClick={() => setShowNotifications(false)}
                       >
                         <XCircleIcon className="h-4 w-4" />
@@ -202,34 +231,38 @@ export default function AutorizadorDashboardPage() {
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {newNotifications.length > 0 ? (
-                        <div className="divide-y">
+                        <div className="divide-y divide-blue-100">
                           {newNotifications.map((pase) => (
-                            <div key={pase.id} className="p-3 hover:bg-gray-50">
+                            <div key={pase.id} className="p-4 hover:bg-blue-50 transition-colors duration-150">
                               <div className="flex justify-between">
-                                <span className="font-medium">{pase.folio}</span>
-                                <span className="text-xs text-gray-500">
+                                <span className="font-medium text-blue-800">{pase.folio}</span>
+                                <span className="text-xs text-blue-500 bg-blue-50 px-2 py-1 rounded-full">
                                   {format(new Date(pase.fechaCreacion), "dd MMM, HH:mm", { locale: es })}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 mt-1">
+                              <p className="text-sm text-blue-700 mt-2 font-medium">
                                 Nuevo pase de {pase.operadorNombre} {pase.operadorApellidoPaterno}
                               </p>
                               <Button
                                 variant="link"
                                 size="sm"
-                                className="p-0 h-auto mt-1"
+                                className="p-0 h-auto mt-2 text-blue-600 hover:text-blue-800"
                                 onClick={() => {
                                   handleVerDetalle(pase.id!)
                                   setShowNotifications(false)
                                 }}
                               >
-                                Ver detalles
+                                Ver detalles →
                               </Button>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="p-4 text-center text-gray-500">No hay notificaciones nuevas</div>
+                        <div className="p-6 text-center">
+                          <div className="bg-blue-50 rounded-xl p-4 shadow-sm border border-blue-100">
+                            <p className="text-blue-800 font-medium">No hay notificaciones nuevas</p>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -238,7 +271,7 @@ export default function AutorizadorDashboardPage() {
 
               <Button
                 variant="outline"
-                className="bg-white/10 text-white hover:bg-white/20 flex items-center gap-2"
+                className="bg-blue-600 text-white border-none hover:bg-blue-700 font-medium py-2 px-4 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2"
                 onClick={handleLogout}
               >
                 <LogOutIcon className="h-4 w-4" />
@@ -248,11 +281,11 @@ export default function AutorizadorDashboardPage() {
           }
         />
 
-        <Card className="shadow-xl mb-6">
-          <CardHeader className="bg-gray-900 text-white p-4">
-            <h2 className="text-xl font-bold">Buscar Pases</h2>
+        <Card className="shadow-xl bg-white rounded-xl overflow-hidden mx-auto mb-6">
+          <CardHeader className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-6">
+            <h2 className="text-xl font-bold tracking-tight">Buscar Pases</h2>
           </CardHeader>
-          <CardContent className="p-4">
+          <CardContent className="p-5">
             <div className="flex gap-4">
               <div className="flex-1 relative">
                 <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -263,14 +296,28 @@ export default function AutorizadorDashboardPage() {
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline" size="icon" onClick={handleClearSearch} title="Limpiar búsqueda">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleClearSearch} 
+                title="Limpiar búsqueda"
+                className="bg-blue-600 text-white border-none hover:bg-blue-700 rounded-lg shadow-md transition-all duration-200"
+              >
                 <RefreshCwIcon className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl">
+        <Card className="shadow-xl bg-white rounded-xl overflow-hidden mx-auto">
+          <CardHeader className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold tracking-tight">Pases de Salida</h2>
+              <Badge className="bg-green-500 text-white border-none text-sm font-medium px-4 py-1.5 rounded-full shadow-md">
+                {pases.length} pases en total
+              </Badge>
+            </div>
+          </CardHeader>
           <Tabs defaultValue="pendientes" value={activeTab} onValueChange={setActiveTab}>
             <div className="px-4 pt-4">
               <TabsList className="grid w-full grid-cols-4">
@@ -299,25 +346,26 @@ export default function AutorizadorDashboardPage() {
             <TabsContent value={activeTab} className="m-0">
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Folio</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Operador</TableHead>
-                      <TableHead>Placa</TableHead>
-                      <TableHead>Razón Social</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <TableHeader className="bg-blue-50">
+                  <TableRow>
+                    <TableHead className="font-semibold text-blue-800">Folio</TableHead>
+                    <TableHead className="font-semibold text-blue-800">Fecha</TableHead>
+                    <TableHead className="font-semibold text-blue-800">Operador</TableHead>
+                    <TableHead className="font-semibold text-blue-800">Placa</TableHead>
+                    <TableHead className="font-semibold text-blue-800">Razón Social</TableHead>
+                    <TableHead className="font-semibold text-blue-800">Estado</TableHead>
+                    <TableHead className="text-right font-semibold text-blue-800">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
                   <TableBody>
                     {filteredPases.length > 0 ? (
                       filteredPases.map((pase) => (
                         <TableRow
                           key={pase.id}
-                          className={newNotifications.some((n) => n.id === pase.id) ? "bg-yellow-50" : ""}
+                          className={newNotifications.some((n) => n.id === pase.id) ? "bg-yellow-50" : 
+                            filteredPases.indexOf(pase) % 2 === 0 ? "bg-white" : "bg-blue-50/50 hover:bg-blue-50"}
                         >
-                          <TableCell className="font-medium">{pase.folio}</TableCell>
+                          <TableCell className="font-medium text-blue-800">{pase.folio}</TableCell>
                           <TableCell>{new Date(pase.fecha).toLocaleDateString()}</TableCell>
                           <TableCell>{`${pase.operadorNombre} ${pase.operadorApellidoPaterno}`}</TableCell>
                           <TableCell>{pase.tractorPlaca}</TableCell>
@@ -329,11 +377,23 @@ export default function AutorizadorDashboardPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleVerDetalle(pase.id!)}
-                                className="flex items-center gap-1"
+                                className="bg-blue-600 text-white border-none hover:bg-blue-700 font-medium py-1 px-3 rounded-lg shadow-md transition-all duration-200 flex items-center gap-1"
                               >
                                 <FileTextIcon className="h-3 w-3" />
                                 {pase.estado === "PENDIENTE" ? "Autorizar" : "Ver Detalle"}
                               </Button>
+                              
+                              {pase.estado !== "FIRMADO" && pase.estado !== "AUTORIZADO" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleQuickAction(pase.id!, "eliminar")}
+                                  className="bg-red-600 text-white border-none hover:bg-red-700 font-medium py-1 px-3 rounded-lg shadow-md transition-all duration-200 flex items-center gap-1"
+                                >
+                                  <TrashIcon className="h-3 w-3" />
+                                  Eliminar
+                                </Button>
+                              )}
 
                               {pase.estado === "FIRMADO" && (
                                 <>
@@ -341,7 +401,7 @@ export default function AutorizadorDashboardPage() {
                                     variant="default"
                                     size="sm"
                                     onClick={() => handleQuickAction(pase.id!, "autorizar")}
-                                    className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
+                                    className="bg-green-600 text-white border-none hover:bg-green-700 font-medium py-1 px-3 rounded-lg shadow-md transition-all duration-200 flex items-center gap-1"
                                   >
                                     <CheckCircleIcon className="h-3 w-3" />
                                     Aprobar
@@ -350,10 +410,19 @@ export default function AutorizadorDashboardPage() {
                                     variant="destructive"
                                     size="sm"
                                     onClick={() => handleQuickAction(pase.id!, "rechazar")}
-                                    className="flex items-center gap-1"
+                                    className="bg-red-600 text-white border-none hover:bg-red-700 font-medium py-1 px-3 rounded-lg shadow-md transition-all duration-200 flex items-center gap-1"
                                   >
                                     <XCircleIcon className="h-3 w-3" />
                                     Rechazar
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleQuickAction(pase.id!, "eliminar")}
+                                    className="bg-red-600 text-white border-none hover:bg-red-700 font-medium py-1 px-3 rounded-lg shadow-md transition-all duration-200 flex items-center gap-1"
+                                  >
+                                    <TrashIcon className="h-3 w-3" />
+                                    Eliminar
                                   </Button>
                                 </>
                               )}
@@ -363,19 +432,21 @@ export default function AutorizadorDashboardPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          <p className="mb-2 font-medium">No se encontraron pases de salida</p>
-                          <p className="text-sm">
-                            {searchQuery
-                              ? "No hay pases que coincidan con la búsqueda"
-                              : activeTab === "pendientes"
-                                ? "No hay pases pendientes de autorización"
-                                : activeTab === "firmados"
-                                  ? "No hay pases firmados"
-                                  : activeTab === "rechazados"
-                                    ? "No hay pases rechazados"
-                                    : "No hay pases registrados"}
-                          </p>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <div className="bg-blue-50 rounded-xl p-8 shadow-sm border border-blue-100 max-w-lg mx-auto">
+                            <p className="mb-3 font-medium text-blue-800 text-lg">No se encontraron pases de salida</p>
+                            <p className="text-blue-600">
+                              {searchQuery
+                                ? "No hay pases que coincidan con la búsqueda"
+                                : activeTab === "pendientes"
+                                  ? "No hay pases pendientes de autorización"
+                                  : activeTab === "firmados"
+                                    ? "No hay pases firmados"
+                                    : activeTab === "rechazados"
+                                      ? "No hay pases rechazados"
+                                      : "No hay pases registrados"}
+                            </p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}

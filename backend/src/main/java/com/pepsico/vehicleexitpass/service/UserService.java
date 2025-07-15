@@ -60,6 +60,7 @@ public class UserService {
         User user = new User();
         user.setNombre(request.getName());
         user.setApellido(request.getApellido() != null ? request.getApellido() : "");
+        user.setSegundoApellido(request.getSegundoApellido());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRol(request.getRole());
@@ -81,6 +82,7 @@ public class UserService {
         
         user.setNombre(userDto.getNombre());
         user.setApellido(userDto.getApellido());
+        user.setSegundoApellido(userDto.getSegundoApellido());
         user.setEmail(userDto.getEmail());
         user.setRol(userDto.getRol());
         

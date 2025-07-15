@@ -15,8 +15,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -25,10 +27,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 @RestController
 @RequestMapping("/passes")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, 
-    allowedHeaders = "*", 
-    allowCredentials = "true",
-    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class VehicleExitPassController {
     
     @Autowired
@@ -109,9 +107,22 @@ public class VehicleExitPassController {
                 }
             } else if (status != null) {
                 try {
-                    String normalizedStatus = normalizeStatus(status);
-                    PassStatus passStatus = PassStatus.valueOf(normalizedStatus.toUpperCase());
-                    passes = passService.getPassesByStatus(passStatus, pageable);
+                    // Check if status contains multiple values separated by commas
+                    if (status.contains(",")) {
+                        String[] statusValues = status.split(",");
+                        List<PassStatus> statusList = new ArrayList<>();
+                        
+                        for (String statusValue : statusValues) {
+                            String normalizedStatus = normalizeStatus(statusValue.trim());
+                            statusList.add(PassStatus.valueOf(normalizedStatus.toUpperCase()));
+                        }
+                        
+                        passes = passService.getPassesByStatusList(statusList, pageable);
+                    } else {
+                        String normalizedStatus = normalizeStatus(status);
+                        PassStatus passStatus = PassStatus.valueOf(normalizedStatus.toUpperCase());
+                        passes = passService.getPassesByStatus(passStatus, pageable);
+                    }
                 } catch (IllegalArgumentException e) {
                     return createErrorResponse("Invalid status value: " + status + ". Valid values are: pendiente, firmado, autorizado, rechazado", HttpStatus.BAD_REQUEST);
                 }
@@ -151,7 +162,7 @@ public class VehicleExitPassController {
     }
     
     @PostMapping("/create")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SEGURIDAD')")
+    
     public ResponseEntity<?> createPass(@Valid @RequestBody Map<String, Object> passData) {
         try {
             // Log de depuración
@@ -162,9 +173,9 @@ public class VehicleExitPassController {
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
                 
-            // Configurar fechas por defecto si no están presentes
-            if (!passData.containsKey("fechaCreacion")) {
-                passData.put("fechaCreacion", LocalDateTime.now().toString());
+            // No incluir fechaCreacion en los datos recibidos, se establecerá después
+            if (passData.containsKey("fechaCreacion")) {
+                passData.remove("fechaCreacion");
             }
             
             // Si se envía la fecha como string, asegurarse de que tenga el formato correcto
@@ -257,14 +268,14 @@ public class VehicleExitPassController {
         return ResponseEntity.ok(signedPass);
     }
     
-    @PostMapping("/authorize/{id}")
+    @PostMapping("/{id}/authorize")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
     public ResponseEntity<VehicleExitPassDto> authorizePass(@PathVariable String id) {
         VehicleExitPassDto authorizedPass = passService.authorizePass(id);
         return ResponseEntity.ok(authorizedPass);
     }
     
-    @PostMapping("/reject/{id}")
+    @PostMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
     public ResponseEntity<VehicleExitPassDto> rejectPass(@PathVariable String id, 
                                                         @RequestBody Map<String, String> rejectData) {
@@ -274,7 +285,7 @@ public class VehicleExitPassController {
     }
     
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
     public ResponseEntity<?> deletePass(@PathVariable String id) {
         passService.deletePass(id);
         return ResponseEntity.ok().body("{\"message\": \"Pass deleted successfully!\"}");

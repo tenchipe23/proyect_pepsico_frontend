@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useRouter } from "next/navigation"
 import { ShieldAlertIcon } from "lucide-react"
 import { useEffect, useState } from "react"
-import router from "next/router"
+import { useAuth } from "@/context/auth-context"
 
 export default function UnauthorizedPage() {
   const router = useRouter()
+  const { logout } = useAuth()
   const [user, setUser] = useState<any>(null)
   const [referrer, setReferrer] = useState<string | null>(null)
 
@@ -22,10 +23,17 @@ export default function UnauthorizedPage() {
 
       // Get referrer from URL if available
       if (typeof window !== "undefined") {
-        const urlParams = new URLSearchParams(window.location.search)
-        const from = urlParams.get("from")
-        if (from) {
-          setReferrer(decodeURIComponent(from))
+        // Primero intentar obtener la ruta original guardada en localStorage
+        const originalPath = localStorage.getItem('originalAccessPath')
+        if (originalPath) {
+          setReferrer(originalPath)
+        } else {
+          // Si no hay ruta original, usar el parámetro 'from' de la URL
+          const urlParams = new URLSearchParams(window.location.search)
+          const from = urlParams.get("from")
+          if (from) {
+            setReferrer(decodeURIComponent(from))
+          }
         }
       }
     } catch (error) {
@@ -34,8 +42,9 @@ export default function UnauthorizedPage() {
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem("user")
-    router.push("/login")
+    // Utilizar la función logout del contexto de autenticación que ya maneja
+    // la limpieza de localStorage, cookies y redirección
+    logout()
   }
 
   return (

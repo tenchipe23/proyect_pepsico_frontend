@@ -34,10 +34,12 @@ export default function AdminPage() {
         <AppHeader
           title="Panel de Administración"
           description={`Bienvenido, ${user?.name || "Administrador"}. Gestione usuarios y pases de salida.`}
+          titleClassName="text-2xl font-bold text-white"
+          descriptionClassName="text-white/90 mt-2"
           actions={
             <Button
               variant="outline"
-              className="bg-white/10 text-white hover:bg-white/20 flex items-center gap-2"
+              className="bg-blue-600 text-white border-none hover:bg-blue-700 font-medium py-2 px-4 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2"
               onClick={handleLogout}
             >
               <LogOutIcon className="h-4 w-4" />
@@ -46,15 +48,25 @@ export default function AdminPage() {
           }
         />
 
-        <Card className="shadow-xl">
-          <CardHeader className="bg-gray-900 text-white p-4">
-            <h2 className="text-xl font-bold mb-4">Panel de Control</h2>
+        <Card className="shadow-xl bg-white rounded-xl overflow-hidden mx-auto">
+          <CardHeader className="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-6">
+            <h2 className="text-2xl font-bold tracking-tight">Panel de Control</h2>
           </CardHeader>
           <CardContent className="p-6">
             <Tabs defaultValue="usuarios" value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="usuarios">Gestión de Usuarios</TabsTrigger>
-                <TabsTrigger value="pases">Gestión de Pases</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-blue-50 p-1 rounded-lg">
+                <TabsTrigger 
+                  value="usuarios" 
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all duration-200"
+                >
+                  Gestión de Usuarios
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="pases" 
+                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all duration-200"
+                >
+                  Gestión de Pases
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="usuarios" className="m-0">
                 <UserManagement />

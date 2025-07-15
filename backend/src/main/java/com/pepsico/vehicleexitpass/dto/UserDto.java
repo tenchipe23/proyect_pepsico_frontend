@@ -9,6 +9,7 @@ public class UserDto {
     private String email;
     private String nombre;
     private String apellido;
+    private String segundoApellido;
     private UserRole rol;
     private LocalDateTime fechaCreacion;
     private LocalDateTime ultimoAcceso;
@@ -17,11 +18,12 @@ public class UserDto {
     // Constructors
     public UserDto() {}
 
-    public UserDto(String id, String email, String nombre, String apellido, UserRole rol) {
+    public UserDto(String id, String email, String nombre, String apellido, String segundoApellido, UserRole rol) {
         this.id = id;
         this.email = email;
         this.nombre = nombre;
         this.apellido = apellido;
+        this.segundoApellido = segundoApellido;
         this.rol = rol;
     }
 
@@ -38,6 +40,9 @@ public class UserDto {
     public String getApellido() { return apellido; }
     public void setApellido(String apellido) { this.apellido = apellido; }
 
+    public String getSegundoApellido() { return segundoApellido; }
+    public void setSegundoApellido(String segundoApellido) { this.segundoApellido = segundoApellido; }
+
     public UserRole getRol() { return rol; }
     public void setRol(UserRole rol) { this.rol = rol; }
 
@@ -51,6 +56,9 @@ public class UserDto {
     public void setEstado(Boolean estado) { this.estado = estado; }
 
     public String getNombreCompleto() {
+        if (segundoApellido != null && !segundoApellido.isEmpty()) {
+            return nombre + " " + apellido + " " + segundoApellido;
+        }
         return nombre + " " + apellido;
     }
 }

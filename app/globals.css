@@ -92,3 +92,54 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Asegurar que los elementos se centren correctamente */
+  .print\:text-center {
+    text-align: center !important;
+  }
+
+  .print\:flex {
+    display: flex !important;
+  }
+
+  .print\:justify-center {
+    justify-content: center !important;
+  }
+
+  .print\:items-center {
+    align-items: center !important;
+  }
+
+  /* Asegurar que los bordes se muestren correctamente */
+  .print\:border,
+  .print\:border-t,
+  .print\:border-b,
+  .print\:border-l,
+  .print\:border-r,
+  .print\:border-black,
+  .print\:border-gray-300 {
+    border-style: solid !important;
+    border-width: 1px !important;
+  }
+
+  .print\:border-black {
+    border-color: #000 !important;
+  }
+
+  .print\:border-gray-300 {
+    border-color: #d1d5db !important;
+  }
+}

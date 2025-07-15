@@ -9,17 +9,13 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring")
 public interface VehicleExitPassMapper {
     
+    @Mapping(target = "fechaFromString", expression = "java(vehicleExitPass.getFechaCreacion() != null ? vehicleExitPass.getFechaCreacion().format(java.time.format.DateTimeFormatter.ofPattern(\"dd/MM/yyyy HH:mm\")) : null)")
+    @Mapping(target = "operador", ignore = true)
     VehicleExitPassDto toDto(VehicleExitPass vehicleExitPass);
     
-    @Mapping(target = "fechaCreacion", ignore = true)
-    @Mapping(target = "paseVehiculos", ignore = true)
-    @Mapping(target = "bitacoras", ignore = true)
-    @Mapping(target = "operador", ignore = true)
+    @Mapping(target = "fechaCreacion", expression = "java(vehicleExitPassDto.getFechaFromString() != null ? java.time.LocalDateTime.parse(vehicleExitPassDto.getFechaFromString(), java.time.format.DateTimeFormatter.ofPattern(\"dd/MM/yyyy HH:mm\")) : null)")
     VehicleExitPass toEntity(VehicleExitPassDto vehicleExitPassDto);
     
-    @Mapping(target = "paseVehiculos", ignore = true)
-    @Mapping(target = "bitacoras", ignore = true)
     @Mapping(target = "fechaCreacion", ignore = true)
-    @Mapping(target = "operador", ignore = true)
     void updateEntityFromDto(VehicleExitPassDto vehicleExitPassDto, @MappingTarget VehicleExitPass vehicleExitPass);
 }

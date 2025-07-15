@@ -1,9 +1,38 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect, useCallback } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
 import { apiClient } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
+
+// Define the API response type for pases
+interface PaseApiResponse {
+  content: PaseData[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
+}
+
+// Define the shape of the context value
+interface PaseContextValue {
+  pases: PaseData[]
+  loading: boolean
+  error: string | null
+  totalPages: number
+  currentPage: number
+  totalElements: number
+  addPase: (pase: Omit<PaseData, 'id' | 'fechaCreacion'>) => Promise<PaseData>
+  updatePase: (id: string, updates: Partial<PaseData>) => Promise<void>
+  deletePase: (id: string) => Promise<void>
+  getPaseById: (id: string) => Promise<PaseData | undefined>
+  refreshPases: (page?: number, size?: number, status?: string, search?: string) => Promise<void>
+  signPase: (id: string, signatureData: { signature: string; seal: string }) => Promise<void>
+  authorizePase: (id: string) => Promise<void>
+  rejectPase: (id: string, reason?: string) => Promise<void>
+  searchPases: (query: string, page?: number, size?: number) => Promise<void>
+  getStatistics: () => Promise<any>
+}
 
 export interface PaseData {
   id?: string
@@ -41,7 +70,7 @@ interface PaseContextType {
   addPase: (pase: Omit<PaseData, "id" | "fechaCreacion">) => Promise<PaseData>
   updatePase: (id: string, updates: Partial<PaseData>) => Promise<void>
   deletePase: (id: string) => Promise<void>
-  getPaseById: (id: string) => PaseData | undefined
+  getPaseById: (id: string) => Promise<PaseData | undefined>
   refreshPases: (page?: number, size?: number, status?: string, search?: string) => Promise<void>
   signPase: (id: string, signatureData: { signature: string; seal: string }) => Promise<void>
   authorizePase: (id: string) => Promise<void>
@@ -50,32 +79,52 @@ interface PaseContextType {
   getStatistics: () => Promise<any>
 }
 
-const PaseContext = createContext<PaseContextType | undefined>(undefined)
+const PaseContext = createContext<PaseContextValue | undefined>(undefined)
 
-export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [pases, setPases] = useState<PaseData[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [totalPages, setTotalPages] = useState(0)
-  const [currentPage, setCurrentPage] = useState(0)
-  const [totalElements, setTotalElements] = useState(0)
+interface PaseProviderProps {
+  children: ReactNode
+}
+
+export const PaseProvider: React.FC<PaseProviderProps> = ({ children }) => {
+  const [pases, setPases] = useState<PaseData[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [totalElements, setTotalElements] = useState<number>(0);
+
+  // Helper function to handle API responses with proper typing
+  const handleApiResponse = <T,>(
+    response: { success: boolean; data?: T; error?: string },
+    successCallback?: (data: T) => void
+  ): boolean => {
+    if (response.success && response.data) {
+      if (successCallback) {
+        successCallback(response.data);
+      }
+      return true;
+    } else {
+      setError(response.error || 'Error en la operación');
+      return false;
+    }
+  };
+
   const { toast } = useToast()
 
-  const refreshPases = useCallback(async (page = 0, size = 10, status?: string, search?: string) => {
+  const refreshPases = useCallback(async (page = 0, size = 10, status?: string, search?: string): Promise<void> => {
     try {
       setLoading(true)
       setError(null)
 
       const response = await apiClient.getPasses(page, size, status, search)
 
-      if (response.success && response.data) {
-        setPases(response.data.content || [])
-        setTotalPages(response.data.totalPages || 0)
-        setCurrentPage(response.data.number || 0)
-        setTotalElements(response.data.totalElements || 0)
-      } else {
-        setError(response.error || "Error loading passes")
-        setPases([])
+      if (handleApiResponse(response, (data) => {
+        setPases(data.content || []);
+        setTotalPages(data.totalPages || 0);
+        setCurrentPage(data.number || 0);
+        setTotalElements(data.totalElements || 0);
+      })) {
+        setLoading(false);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Error loading passes"
@@ -87,21 +136,21 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
-  const searchPases = useCallback(async (query: string, page = 0, size = 10) => {
+  const searchPases = useCallback(async (query: string, page = 0, size = 10): Promise<void> => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await apiClient.globalSearch(query, page, size)
+      // Use getPasses method instead of globalSearch
+      const response = await apiClient.getPasses(page, size, undefined, query)
 
-      if (response.success && response.data) {
-        setPases(response.data.content || [])
-        setTotalPages(response.data.totalPages || 0)
-        setCurrentPage(response.data.number || 0)
-        setTotalElements(response.data.totalElements || 0)
-      } else {
-        setError(response.error || "Error searching passes")
-        setPases([])
+      if (handleApiResponse(response, (data) => {
+        setPases(data.content || []);
+        setTotalPages(data.totalPages || 0);
+        setCurrentPage(data.number || 0);
+        setTotalElements(data.totalElements || 0);
+      })) {
+        setLoading(false);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Error searching passes"
@@ -118,274 +167,230 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshPases()
   }, [refreshPases])
 
-  const addPase = useCallback(
-    async (paseData: Omit<PaseData, "id" | "fechaCreacion">): Promise<PaseData> => {
-      try {
-        setLoading(true)
-        
-        // Generate a UUID for the new pass
-        const passId = crypto.randomUUID()
-        const now = new Date().toISOString()
-        
-        // Create the pass object with all required fields
-        const newPass = {
-          ...paseData,
-          id: passId,
-          estado: "PENDIENTE",
-          fechaCreacion: now,
-          fechaFirma: now, // Initialize with current time
-          fechaAutorizacion: now, // Initialize with current time
-          // Asegurarse de que los campos del operador se envíen correctamente
-          operadorNombre: paseData.operadorNombre || '',
-          operadorApellidoPaterno: paseData.operadorApellidoPaterno || '',
-          operadorApellidoMaterno: paseData.operadorApellidoMaterno || ''
-        };
-        
-        console.log("Enviando datos al backend:", newPass);
-        const response = await apiClient.createPass(newPass)
+  const addPase = useCallback(async (pase: Omit<PaseData, "id" | "fechaCreacion">): Promise<PaseData> => {
+    try {
+      setLoading(true)
+      setError(null)
 
-        if (response.success && response.data) {
-          const newPase = response.data as PaseData
-          setPases((prev) => [newPase, ...prev])
+      // Asegurarse de que los campos requeridos estén presentes
+      const newPass = {
+        ...pase,
+        fecha: pase.fecha || new Date().toISOString().split('T')[0], // Solo la parte de la fecha YYYY-MM-DD
+        estado: 'PENDIENTE' as const,
+        // No incluir fechaCreacion, dejar que el backend la maneje
+      };
 
-          toast({
-            title: "Pase creado",
-            description: `Pase ${newPase.folio} creado exitosamente`,
-          })
-
-          return newPase
-        } else {
-          throw new Error(response.error || "Error creating pass")
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Error creating pass"
-        setError(errorMessage)
+      console.log("Enviando datos al backend:", newPass);
+      
+      // Create a new pase using the public API
+      const response = await apiClient.createPass(newPass);
+      if (response.success && response.data) {
+        const newPase = response.data as PaseData;
+        setPases(prev => [newPase, ...prev]);
         toast({
-          variant: "destructive",
-          title: "Error",
-          description: errorMessage,
-        })
-        throw error
-      } finally {
-        setLoading(false)
+          title: 'Pase creado',
+          description: 'El pase se ha creado correctamente',
+        });
+        setLoading(false);
+        return newPase;
+      } else {
+        throw new Error(response.error || 'Error al crear el pase');
       }
-    },
-    [toast],
-  )
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al crear el pase'
+      setError(errorMessage)
+      console.error('Error creating pass:', error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  const updatePase = useCallback(
-    async (id: string, updates: Partial<PaseData>) => {
-      try {
-        setLoading(true)
+  const deletePase = useCallback(async (id: string): Promise<void> => {
+    try {
+      setLoading(true);
 
-        const response = await apiClient.updatePass(id, updates)
-
-        if (response.success) {
-          setPases((prev) => prev.map((pase) => (pase.id === id ? { ...pase, ...updates } : pase)))
-
-          toast({
-            title: "Pase actualizado",
-            description: "El pase ha sido actualizado exitosamente",
-          })
-        } else {
-          throw new Error(response.error || "Error updating pass")
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Error updating pass"
-        setError(errorMessage)
+      // Delete a pase using the public API
+      const response = await apiClient.deletePass(id);
+      if (response.success) {
+        setPases(prev => prev.filter(pase => pase.id !== id));
         toast({
-          variant: "destructive",
-          title: "Error",
-          description: errorMessage,
-        })
-        throw error
-      } finally {
-        setLoading(false)
+          title: 'Pase eliminado',
+          description: 'El pase se ha eliminado correctamente',
+        });
+      } else {
+        throw new Error(response.error || 'Error al eliminar el pase');
       }
-    },
-    [toast],
-  )
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al eliminar el pase'
+      setError(errorMessage)
+      console.error('Error deleting pass:', error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  const deletePase = useCallback(
-    async (id: string) => {
-      try {
-        setLoading(true)
+  const updatePase = useCallback(async (id: string, updates: Partial<PaseData>): Promise<void> => {
+    try {
+      setLoading(true);
 
-        const response = await apiClient.deletePass(id)
-
-        if (response.success) {
-          setPases((prev) => prev.filter((pase) => pase.id !== id))
-
-          toast({
-            title: "Pase eliminado",
-            description: "El pase ha sido eliminado exitosamente",
-          })
-        } else {
-          throw new Error(response.error || "Error deleting pass")
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Error deleting pass"
-        setError(errorMessage)
+      // Update a pase using the public API
+      const response = await apiClient.updatePass(id, updates);
+      if (response.success && response.data) {
+        const updatedPase = response.data as PaseData;
+        setPases(prev =>
+          prev.map(pase => (pase.id === id ? updatedPase : pase))
+        );
         toast({
-          variant: "destructive",
-          title: "Error",
-          description: errorMessage,
-        })
-        throw error
-      } finally {
-        setLoading(false)
+          title: 'Pase actualizado',
+          description: 'El pase se ha actualizado correctamente',
+        });
+      } else {
+        throw new Error(response.error || 'Error al actualizar el pase');
       }
-    },
-    [toast],
-  )
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al actualizar el pase'
+      setError(errorMessage)
+      console.error('Error updating pass:', error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  const getPaseById = useCallback((id: string): PaseData | undefined => {
-    return pases.find((pase) => pase.id === id)
+  const getPaseById = useCallback(async (id: string): Promise<PaseData | undefined> => {
+    // Primero buscar en el array local
+    const localPase = pases.find((pase) => pase.id === id);
+    if (localPase) {
+      return localPase;
+    }
+    
+    // Si no se encuentra en el array local, hacer una llamada al backend
+    try {
+      setLoading(true);
+      const response = await apiClient.getPassById(id);
+      if (response.success && response.data) {
+        // Agregar el pase al array local para futuras referencias
+        const fetchedPase = response.data as PaseData;
+        setPases(prev => {
+          // Verificar si el pase ya existe en el array (por si acaso)
+          const exists = prev.some(p => p.id === id);
+          if (exists) {
+            return prev.map(p => p.id === id ? fetchedPase : p);
+          } else {
+            return [...prev, fetchedPase];
+          }
+        });
+        return fetchedPase;
+      }
+      return undefined;
+    } catch (error) {
+      console.error('Error fetching pass by ID:', error);
+      return undefined;
+    } finally {
+      setLoading(false);
+    }
   }, [pases])
 
-  const signPase = useCallback(
-    async (id: string, signatureData: { signature: string; seal: string }) => {
-      try {
-        setLoading(true)
+  const signPase = useCallback(async (id: string, signatureData: { signature: string; seal: string }): Promise<void> => {
+    try {
+      setLoading(true);
 
-        const response = await apiClient.signPass(id, signatureData)
-
-        if (response.success) {
-          setPases((prev) =>
-            prev.map((pase) =>
-              pase.id === id
-                ? {
-                    ...pase,
-                    firma: signatureData.signature,
-                    sello: signatureData.seal,
-                    estado: "FIRMADO" as const,
-                    fechaFirma: new Date().toISOString(),
-                  }
-                : pase,
-            ),
-          )
-
-          toast({
-            title: "Pase firmado",
-            description: "El pase ha sido firmado exitosamente",
-          })
-        } else {
-          throw new Error(response.error || "Error signing pass")
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Error signing pass"
-        setError(errorMessage)
+      // Sign a pase using the public API
+      const response = await apiClient.signPass(id, signatureData);
+      if (response.success && response.data) {
+        const updatedPase = response.data as PaseData;
+        setPases(prev =>
+          prev.map(pase => (pase.id === id ? updatedPase : pase))
+        );
         toast({
-          variant: "destructive",
-          title: "Error",
-          description: errorMessage,
-        })
-        throw error
-      } finally {
-        setLoading(false)
+          title: 'Pase firmado',
+          description: 'El pase se ha firmado correctamente',
+        });
+      } else {
+        throw new Error(response.error || 'Error al firmar el pase');
       }
-    },
-    [toast],
-  )
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al firmar el pase'
+      setError(errorMessage)
+      console.error('Error signing pass:', error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   const authorizePase = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<void> => {
+      if (!id) return
+
       try {
-        setLoading(true)
+        setLoading(true);
 
-        const response = await apiClient.authorizePass(id)
-
-        if (response.success) {
+        // Authorize a pase using the public API
+        const response = await apiClient.authorizePass(id);
+        if (response.success && response.data) {
+          const updatedPase = response.data as PaseData;
           setPases((prev) =>
             prev.map((pase) =>
-              pase.id === id
-                ? {
-                    ...pase,
-                    estado: "AUTORIZADO" as const,
-                    fechaAutorizacion: new Date().toISOString(),
-                  }
-                : pase,
-            ),
-          )
-
-          toast({
-            title: "Pase autorizado",
-            description: "El pase ha sido autorizado exitosamente",
-          })
+              pase.id === id ? updatedPase : pase
+            )
+          );
         } else {
-          throw new Error(response.error || "Error authorizing pass")
+          throw new Error(response.error || 'Error al autorizar el pase');
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Error authorizing pass"
+        const errorMessage =
+          error instanceof Error ? error.message : 'Error al autorizar el pase'
         setError(errorMessage)
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: errorMessage,
-        })
+        console.error('Error authorizing pass:', error)
         throw error
       } finally {
         setLoading(false)
       }
     },
-    [toast],
+    []
   )
 
   const rejectPase = useCallback(
-    async (id: string, reason?: string) => {
+    async (id: string, reason?: string): Promise<void> => {
+      if (!id) return
+
       try {
-        setLoading(true)
+        setLoading(true);
 
-        const response = await apiClient.rejectPass(id, reason)
-
-        if (response.success) {
+        // Reject a pase using the public API
+        const response = await apiClient.rejectPass(id, reason || '');
+        if (response.success && response.data) {
+          const updatedPase = response.data as PaseData;
           setPases((prev) =>
             prev.map((pase) =>
-              pase.id === id
-                ? {
-                    ...pase,
-                    estado: "RECHAZADO" as const,
-                  }
-                : pase,
-            ),
-          )
-
-          toast({
-            title: "Pase rechazado",
-            description: "El pase ha sido rechazado",
-            variant: "destructive",
-          })
+              pase.id === id ? updatedPase : pase
+            )
+          );
         } else {
-          throw new Error(response.error || "Error rejecting pass")
+          throw new Error(response.error || 'Error al rechazar el pase');
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Error rejecting pass"
+        const errorMessage = error instanceof Error ? error.message : 'Error al rechazar el pase'
         setError(errorMessage)
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: errorMessage,
-        })
+        console.error('Error rejecting pass:', error)
         throw error
       } finally {
         setLoading(false)
       }
     },
-    [toast],
+    []
   )
 
-  const getStatistics = useCallback(async () => {
+  const getStatistics = useCallback(async (): Promise<any> => {
     try {
       setLoading(true)
-      console.log("Fetching statistics from API...")
-      
-      // Hacer la petición al endpoint corregido
       const response = await apiClient.getPassStatistics()
-      
-      console.log("Statistics API response:", response)
-      
-      // Si la respuesta es exitosa y tiene datos, devolverlos
+
       if (response.success && response.data) {
+        // La respuesta del backend ya tiene la estructura correcta
         const stats = {
           totalPasses: response.data.totalPasses || 0,
           pendingPasses: response.data.pendingPasses || 0,
@@ -394,26 +399,8 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
           rejectedPasses: response.data.rejectedPasses || 0,
           todayPasses: response.data.todayPasses || 0
         }
-        console.log("Parsed statistics:", stats)
+        console.log("Statistics loaded:", stats)
         return stats
-      } 
-      
-      // Si hay un error en la respuesta, lanzar el error
-      const errorMessage = response.error || "Error al cargar las estadísticas"
-      console.error("Error in statistics response:", response)
-      throw new Error(errorMessage)
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Error al cargar estadísticas"
-      console.error("Error getting statistics:", error)
-      
-      // Mostrar notificación de error solo si no es un error de autenticación
-      if (!errorMessage.includes('Unauthorized') && !errorMessage.includes('No authentication token')) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: `No se pudieron cargar las estadísticas: ${errorMessage}`,
-        })
       }
       
       // Devolver valores por defecto
@@ -428,12 +415,24 @@ export const PaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Returning default statistics due to error")
       return defaultStats
+    } catch (error) {
+      console.error("Error loading statistics:", error)
+      // Devolver valores por defecto en caso de error
+      const defaultStats = {
+        totalPasses: 0,
+        pendingPasses: 0,
+        signedPasses: 0,
+        authorizedPasses: 0,
+        rejectedPasses: 0,
+        todayPasses: 0
+      }
+      return defaultStats
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [])
 
-  const value: PaseContextType = {
+  const value: PaseContextValue = {
     pases,
     loading,
     error,

@@ -5,6 +5,7 @@ import com.pepsico.vehicleexitpass.entity.PassStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 
 public class VehicleExitPassDto {
@@ -18,9 +19,12 @@ public class VehicleExitPassDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate fecha;
     
-    // For JSON deserialization
+    // Used for date format conversion in mapping
+    private String fechaFromString;
+    
+    // For JSON deserialization of 'fecha' field
     @JsonSetter("fecha")
-    public void setFechaFromString(String dateString) {
+    public void setFechaFromJson(String dateString) {
         if (dateString != null) {
             // Manejar tanto fechas ISO 8601 como fechas simples
             if (dateString.contains("T")) {
@@ -70,6 +74,10 @@ public class VehicleExitPassDto {
     
     public LocalDate getFecha() { return fecha; }
     public void setFecha(LocalDate fecha) { this.fecha = fecha; }
+    
+    @JsonIgnore
+    public String getFechaFromString() { return fechaFromString; }
+    public void setFechaFromString(String fechaFromString) { this.fechaFromString = fechaFromString; }
     
     public String getTractorEco() { return tractorEco; }
     public void setTractorEco(String tractorEco) { this.tractorEco = tractorEco; }
