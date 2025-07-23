@@ -1,0 +1,27 @@
+# Archivos y directorios a ignorar en Vercel
+backend/
+scripts/
+*.md
+.env.local
+.env.development
+.env.test
+.DS_Store
+*.log
+node_modules/
+.next/
+out/
+.vercel/
+
+# Archivos de desarrollo
+*.test.js
+*.test.ts
+*.test.tsx
+__tests__/
+coverage/
+
+# Archivos de configuración local
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

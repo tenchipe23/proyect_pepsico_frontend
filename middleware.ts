@@ -26,10 +26,20 @@ export async function middleware(request: NextRequest) {
       },
     });
   }
+  
   const { pathname } = request.nextUrl;
   
   // Permitir acceso a rutas públicas
   if (publicPaths.some(path => pathname === path || pathname.startsWith(`${path}/`))) {
+    return NextResponse.next();
+  }
+
+  // Manejar rutas específicas para compatibilidad con Vercel
+  if (pathname === '/login' || pathname.startsWith('/login/')) {
+    return NextResponse.next();
+  }
+
+  if (pathname === '/solicitar' || pathname.startsWith('/solicitar/')) {
     return NextResponse.next();
   }
 

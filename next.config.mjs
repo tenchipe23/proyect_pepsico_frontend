@@ -15,6 +15,10 @@ const nextConfig = {
     serverMinification: false,
     optimizePackageImports: ['@/components/ui'],
   },
+  // Configuración específica para Vercel y route groups
+  trailingSlash: false,
+  generateEtags: false,
+  poweredByHeader: false,
   async headers() {
     return [
       {

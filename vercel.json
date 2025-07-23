@@ -1,0 +1,63 @@
+{
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "functions": {
+    "app/(public)/login/page.tsx": {
+      "runtime": "nodejs18.x"
+    },
+    "app/(public)/page.tsx": {
+      "runtime": "nodejs18.x"
+    },
+    "app/(public)/solicitar/page.tsx": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/login",
+      "destination": "/login"
+    },
+    {
+      "source": "/solicitar",
+      "destination": "/solicitar"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/login",
+      "dest": "/login"
+    },
+    {
+      "src": "/solicitar",
+      "dest": "/solicitar"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
+}
