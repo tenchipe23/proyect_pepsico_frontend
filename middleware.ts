@@ -34,17 +34,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Manejar rutas específicas para compatibilidad con Vercel
-  if (pathname === '/login' || pathname.startsWith('/login/')) {
-    return NextResponse.next();
-  }
-
-  if (pathname === '/solicitar' || pathname.startsWith('/solicitar/')) {
-    return NextResponse.next();
-  }
-
-  // For client-side routes, let the AuthWrapper handle authentication
-  // The middleware should only handle API routes and server-side redirects
+  // For all other routes, let Next.js handle them
   return NextResponse.next();
 }
 

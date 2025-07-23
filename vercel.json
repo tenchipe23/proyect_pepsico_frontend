@@ -1,44 +1,25 @@
 {
+  "framework": "nextjs",
   "buildCommand": "next build",
   "outputDirectory": ".next",
-  "framework": "nextjs",
-  "functions": {
-    "app/(public)/login/page.tsx": {
-      "runtime": "nodejs18.x"
-    },
-    "app/(public)/page.tsx": {
-      "runtime": "nodejs18.x"
-    },
-    "app/(public)/solicitar/page.tsx": {
-      "runtime": "nodejs18.x"
-    }
-  },
+  "installCommand": "npm install",
+  "devCommand": "next dev",
   "rewrites": [
-    {
-      "source": "/login",
-      "destination": "/login"
-    },
-    {
-      "source": "/solicitar",
-      "destination": "/solicitar"
-    },
     {
       "source": "/api/:path*",
       "destination": "/api/:path*"
     }
   ],
-  "routes": [
+  "redirects": [
     {
-      "src": "/login",
-      "dest": "/login"
+      "source": "/login",
+      "destination": "/login",
+      "permanent": false
     },
     {
-      "src": "/solicitar",
-      "dest": "/solicitar"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "source": "/solicitar", 
+      "destination": "/solicitar",
+      "permanent": false
     }
   ],
   "headers": [
@@ -56,8 +37,17 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "app/**/*.tsx": {
+      "runtime": "nodejs18.x"
+    }
+  }
 }
