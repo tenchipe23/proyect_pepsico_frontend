@@ -86,6 +86,16 @@ management:
     port: -1
 
 ---
+# Local Profile for Docker
+spring:
+  config:
+    activate:
+      on-profile: local
+  sql:
+    init:
+      mode: never
+
+---
 # Development Profile
 spring:
   config:

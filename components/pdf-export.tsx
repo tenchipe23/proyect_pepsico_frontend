@@ -33,13 +33,13 @@ export default function PdfExport({ contentRef, fileName = "pase-de-salida", dis
       const originalStyle = element.style.cssText
       element.style.cssText += `
         transform: scale(1);
-        transform-origin: center;
+        transform-origin: top left;
         width: 100%;
-        max-width: 1000px;
-        margin: 0 auto;
-        padding: 0;
-        font-size: 12px;
-        line-height: 1.2;
+        max-width: none;
+        margin: 0;
+        padding: 10mm;
+        font-size: 10pt;
+        line-height: 1.4;
         box-sizing: border-box;
       `
 
@@ -78,33 +78,36 @@ export default function PdfExport({ contentRef, fileName = "pase-de-salida", dis
         (element as HTMLElement).remove(); // Eliminar completamente del DOM
       });
       
-      // Buscar y eliminar específicamente el botón de modificar firma
-      const modifyButtons = clone.querySelectorAll('button');
-      modifyButtons.forEach((button) => {
-        if (button.textContent?.includes('Modificar Firma y Sello') || 
-            button.innerHTML?.includes('Modificar Firma y Sello') || 
-            button.innerHTML?.includes('Modificar Firma y Sello')) {
-          // Eliminar el botón y su contenedor padre
+      // Forzar vista de seguridad: eliminar botones de autorización, rechazo, edición y cualquier elemento no visible en seguridad
+      const actionButtons = clone.querySelectorAll('button');
+      actionButtons.forEach((button) => {
+        const text = button.textContent?.toLowerCase() || '';
+        if (text.includes('autorizar') || text.includes('rechazar') || text.includes('editar') || text.includes('modificar firma y sello') || text.includes('guardar cambios') || text.includes('eliminar pase')) {
           let parent = button.parentElement;
           while (parent && parent.tagName !== 'BODY') {
-            if (parent.id === 'modify-button-container' || parent.classList.contains('hide-in-pdf')) {
+            if (parent.classList.contains('card-footer') || parent.id === 'modify-button-container' || parent.classList.contains('hide-in-pdf')) {
               parent.remove();
               break;
             }
-            const nextParent = parent.parentElement;
-            if (!nextParent || nextParent.tagName === 'BODY') {
-              button.remove(); // Si no encontramos un contenedor específico, eliminamos solo el botón
-              break;
-            }
-            parent = nextParent;
+            parent = parent.parentElement;
+          }
+          if (!parent) {
+            button.remove();
           }
         }
       });
-      
-      // Eliminar cualquier elemento que contenga el texto "Modificar Firma"
+
+      // Eliminar footers o secciones de acciones
+      const footers = clone.querySelectorAll('.card-footer, [class*="footer"]');
+      footers.forEach((footer) => {
+        footer.remove();
+      });
+
+      // Eliminar cualquier elemento restante con texto de acciones
       const allElements = clone.querySelectorAll('*');
       allElements.forEach((el) => {
-        if (el.textContent?.includes('Modificar Firma y Sello') || el.textContent?.includes('Modificar firma y sello')) {
+        const text = el.textContent?.toLowerCase() || '';
+        if (text.includes('autorizar') || text.includes('rechazar') || text.includes('editar') || text.includes('modificar') || text.includes('eliminar')) {
           el.remove();
         }
       });
@@ -130,24 +133,24 @@ export default function PdfExport({ contentRef, fileName = "pase-de-salida", dis
 
       // Calcular dimensiones para el PDF (Letter) - optimizado para una sola página
       const imgData = canvas.toDataURL("image/png", 1.0) // Máxima calidad
-      const pdfWidth = 250 // Letter width in mm
-      const pdfHeight = 275 // Letter height in mm
-      const margin = 1 // Margen en mm (reducido para aprovechar más espacio)
-      const contentWidth = pdfWidth - (margin)
-      const contentHeight = pdfHeight - (margin)
+      const pdfWidth = 215.9 // Letter width in mm (8.5 inches)
+      const pdfHeight = 279.4 // Letter height in mm (11 inches)
+      const margin = 0// Margen en mm
+      const contentWidth = pdfWidth - (2 * margin)
+      const contentHeight = pdfHeight - (2 * margin)
       
       // Calcular la escala para ajustar a una página
       const imgWidth = canvas.width
       const imgHeight = canvas.height
       const scaleX = contentWidth / (imgWidth * 0.264583) // Convertir px a mm
       const scaleY = contentHeight / (imgHeight * 0.264583)
-      const scale = Math.min(scaleX, scaleY, 0.98) // Reducir solo un poco para asegurar márgenes
+      const scale = scaleX // Llenar el ancho completo
       
       const finalWidth = (imgWidth * 0.264583) * scale
       const finalHeight = (imgHeight * 0.264583) * scale
       
       // Centrar el contenido perfectamente
-      const xOffset = margin + (contentWidth - finalWidth) / 2
+      const xOffset = margin
       const yOffset = margin
 
       // Crear nuevo documento PDF con tamaño Letter
@@ -160,7 +163,7 @@ export default function PdfExport({ contentRef, fileName = "pase-de-salida", dis
       })
 
       // Añadir la imagen centrada al PDF con mejor calidad
-      pdf.addImage(imgData, "PNG", xOffset, yOffset, finalWidth, finalHeight, undefined, 'FAST')
+      pdf.addImage(imgData, "PNG", xOffset, yOffset, finalWidth, finalHeight, undefined, 'SLOW') // Usar compresión lenta para mejor calidad
       
       // Optimizar el PDF
       pdf.setProperties({

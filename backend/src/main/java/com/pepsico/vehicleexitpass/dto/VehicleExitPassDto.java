@@ -7,19 +7,37 @@ import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(description = "Datos de un pase de salida de vehículo")
 public class VehicleExitPassDto {
+    @Schema(description = "Identificador único del pase", example = "5f07c259-4463-4c71-a3cc-b8d59478d83a")
     private String id;
+    
+    @Schema(description = "Folio único del pase", example = "PSV-2023-001")
     private String folio;
+    
+    @Schema(description = "Estado actual del pase", example = "PENDIENTE")
     private PassStatus estado;
+    
+    @Schema(description = "Razón social", example = "Transportes XYZ S.A. de C.V.")
     private String razonSocial;
+    
+    @Schema(description = "Nombre del operador", example = "Juan")
     private String operadorNombre;
+    
+    @Schema(description = "Apellido paterno del operador", example = "Pérez")
     private String operadorApellidoPaterno;
+    
+    @Schema(description = "Apellido materno del operador", example = "García")
     private String operadorApellidoMaterno;
+    
+    @Schema(description = "Fecha programada de salida", example = "2023-01-15")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate fecha;
     
     // Used for date format conversion in mapping
+    @Schema(hidden = true)
     private String fechaFromString;
     
     // For JSON deserialization of 'fecha' field
@@ -35,25 +53,53 @@ public class VehicleExitPassDto {
             }
         }
     }
+    
+    @Schema(description = "Número económico del tractor", example = "ECO-T-12345")
     private String tractorEco;
+    
+    @Schema(description = "Placa del tractor", example = "ABC-123")
     private String tractorPlaca;
+    
+    @Schema(description = "Número económico del remolque 1", example = "ECO-R1-12345")
     private String remolque1Eco;
+    
+    @Schema(description = "Placa del remolque 1", example = "XYZ-789")
     private String remolque1Placa;
+    
+    @Schema(description = "Número económico del remolque 2", example = "ECO-R2-12345")
     private String remolque2Eco;
+    
+    @Schema(description = "Placa del remolque 2", example = "DEF-456")
     private String remolque2Placa;
+    
+    @Schema(description = "Número económico del dolly", example = "ECO-D-12345")
     private String ecoDolly;
+    
+    @Schema(description = "Placa del dolly", example = "GHI-789")
     private String placasDolly;
+    
+    @Schema(description = "Comentarios adicionales", example = "Transporte de producto terminado a centro de distribución")
     private String comentarios;
+    
+    @Schema(description = "Firma digital del operador (Base64)", example = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...")
     private String firma;
+    
+    @Schema(description = "Sello digital de autorización (Base64)", example = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...")
     private String sello;
+    
+    @Schema(description = "Fecha y hora de creación del pase", example = "2023-01-01T12:00:00")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss[.SSS][X]", timezone = "UTC")
     private LocalDateTime fechaCreacion;
     
+    @Schema(description = "Fecha y hora de firma del pase", example = "2023-01-01T14:30:00")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss[.SSS][X]", timezone = "UTC")
     private LocalDateTime fechaFirma;
     
+    @Schema(description = "Fecha y hora de autorización del pase", example = "2023-01-01T15:45:00")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss[.SSS][X]", timezone = "UTC")
     private LocalDateTime fechaAutorizacion;
+    
+    @Schema(description = "Datos del operador")
     private UserDto operador;
     
     // Constructors

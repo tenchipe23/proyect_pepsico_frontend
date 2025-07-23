@@ -60,18 +60,27 @@ public class VehicleExitPassService {
     }
     
     public Page<VehicleExitPassDto> searchPasses(String search, Pageable pageable) {
-        return passRepository.findWithSearch(search, pageable)
+        String sanitizedSearch = sanitizeQuery(search);
+        return passRepository.findWithSearch(sanitizedSearch, pageable)
             .map(passMapper::toDto);
     }
     
     public Page<VehicleExitPassDto> searchPassesByStatus(PassStatus status, String search, Pageable pageable) {
-        return passRepository.findByEstadoWithSearch(status, search, pageable)
+        String sanitizedSearch = sanitizeQuery(search);
+        return passRepository.findByEstadoWithSearch(status, sanitizedSearch, pageable)
             .map(passMapper::toDto);
     }
     
     // New global search method
     public Page<VehicleExitPassDto> globalSearch(String query, Pageable pageable) {
-        return passRepository.globalSearch(query, pageable)
+        String sanitizedQuery = sanitizeQuery(query);
+        return passRepository.globalSearch(sanitizedQuery, pageable)
+            .map(passMapper::toDto);
+    }
+    
+    public Page<VehicleExitPassDto> globalSearchByStatuses(String query, List<PassStatus> statuses, Pageable pageable) {
+        String sanitizedQuery = sanitizeQuery(query);
+        return passRepository.globalSearchByStatuses(sanitizedQuery, statuses, pageable)
             .map(passMapper::toDto);
     }
     
@@ -375,7 +384,12 @@ public class VehicleExitPassService {
         throw new RuntimeException("Cannot delete an authorized pass");
     }
         
-        passRepository.delete(pass);
+        try {
+                bitacoraService.registrarAccion(pass, "ELIMINACION", "Pase eliminado");
+            } catch (Exception e) {
+                System.err.println("Error al registrar en bitácora: " + e.getMessage());
+            }
+            passRepository.delete(pass);
     }
     
     public long getPassCountByStatus(PassStatus status) {
@@ -392,5 +406,15 @@ public class VehicleExitPassService {
             folio = "PASE-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         } while (passRepository.existsByFolio(folio));
         return folio;
+    }
+    
+    private String sanitizeQuery(String query) {
+        if (query == null) return "";
+        String sanitized = query.trim();
+        if (sanitized.length() > 100) {
+            throw new IllegalArgumentException("La consulta de búsqueda es demasiado larga. Máximo 100 caracteres.");
+        }
+        // Podrías agregar más sanitización si es necesario, como eliminar caracteres especiales
+        return sanitized;
     }
 }

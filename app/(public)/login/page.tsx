@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,6 +21,9 @@ const ROLE_PATHS: Record<string, string> = {
 };
 
 export default function LoginPage() {
+  // Clase CSS para el efecto de sacudida
+  const shakeClass = 'animate-shake';
+  
   const { login } = useAuth()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -39,10 +42,26 @@ export default function LoginPage() {
     return ROLE_PATHS[role.toLowerCase()] || '/';
   };
 
+  // Referencia al formulario para aplicar la animación de sacudida
+  const formRef = useRef<HTMLFormElement>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+
+    // Validación básica del formulario
+    if (!formData.email.trim()) {
+      setError('Por favor, ingrese su correo electrónico');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.password.trim()) {
+      setError('Por favor, ingrese su contraseña');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const result = await login(formData.email, formData.password);
@@ -56,11 +75,39 @@ export default function LoginPage() {
         // The AuthWrapper will handle the redirection
         return;
       } else {
-        throw new Error(result?.error || 'Error al iniciar sesión');
+        // Mostrar mensaje de error específico
+        const errorMessage = result?.error || 'Credenciales incorrectas. Por favor, verifique su correo y contraseña.';
+        setError(errorMessage);
+        
+        // Aplicar animación de sacudida al formulario
+        if (formRef.current) {
+          formRef.current.classList.add(shakeClass);
+          setTimeout(() => formRef.current?.classList.remove(shakeClass), 600); // Duración de la animación
+        }
+        
+        // Mostrar también un toast para mayor visibilidad
+        toast({
+          title: 'Error de inicio de sesión',
+          description: errorMessage,
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError(error instanceof Error ? error.message : 'Error desconocido al iniciar sesión');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al iniciar sesión';
+      setError(errorMessage);
+      
+      // Aplicar animación de sacudida al formulario
+      if (formRef.current) {
+        formRef.current.classList.add(shakeClass);
+        setTimeout(() => formRef.current?.classList.remove(shakeClass), 600); // Duración de la animación
+      }
+      
+      toast({
+        title: 'Error de conexión',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +119,19 @@ export default function LoginPage() {
       ...prev,
       [name]: value
     }));
-    if (error) setError(null);
+    
+    // Limpiar errores específicos cuando el usuario comienza a escribir
+    if (error) {
+      // Si el campo que se está editando estaba vacío y ahora tiene contenido
+      if (name === 'email' && !formData.email.trim() && value.trim()) {
+        setError(null);
+      } else if (name === 'password' && !formData.password.trim() && value.trim()) {
+        setError(null);
+      } else if (formData.email.trim() && formData.password.trim()) {
+        // Si ambos campos tienen contenido, limpiar el error general
+        setError(null);
+      }
+    }
   };
 
   if (isLoading) {
@@ -100,9 +159,14 @@ export default function LoginPage() {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+          {error && formData.email.trim() && formData.password.trim() && (
+            <Alert variant="destructive" className="bg-red-50 border-red-300 text-red-800 animate-pulse">
+              <div className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <AlertDescription className="font-medium">{error}</AlertDescription>
+              </div>
             </Alert>
           )}
           
@@ -114,7 +178,7 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Correo Electrónico</Label>
               <div className="relative">
@@ -126,11 +190,15 @@ export default function LoginPage() {
                   placeholder="correo@pepsico.com"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="pl-10"
+                  className={`pl-10 ${error && !formData.email.trim() ? 'border-red-500 focus:ring-red-500' : ''}`}
                   required
                   disabled={isLoading}
+                  aria-invalid={error && !formData.email.trim() ? 'true' : 'false'}
                 />
               </div>
+              {error && !formData.email.trim() && (
+                <p className="text-sm text-red-500 mt-1">Por favor, ingrese su correo electrónico</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -146,11 +214,15 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="pl-10"
+                  className={`pl-10 ${error && !formData.password.trim() ? 'border-red-500 focus:ring-red-500' : ''}`}
                   required
                   disabled={isLoading}
+                  aria-invalid={error && !formData.password.trim() ? 'true' : 'false'}
                 />
               </div>
+              {error && !formData.password.trim() && (
+                <p className="text-sm text-red-500 mt-1">Por favor, ingrese su contraseña</p>
+              )}
             </div>
 
             <Button 

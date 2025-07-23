@@ -41,10 +41,11 @@ export default function AutorizadorDashboardPage() {
   // Debounced search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
+      const status = activeTab === "todos" ? undefined : activeTab.toUpperCase();
       if (searchQuery.trim()) {
-        searchPases(searchQuery.trim())
+        searchPases(searchQuery.trim(), 0, 50, status)
       } else {
-        refreshPases(0, 50, activeTab === "todos" ? undefined : activeTab.toUpperCase(), undefined)
+        refreshPases(0, 50, status, undefined)
       }
     }, 500)
 

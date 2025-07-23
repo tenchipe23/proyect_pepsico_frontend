@@ -30,7 +30,7 @@ interface PaseContextValue {
   signPase: (id: string, signatureData: { signature: string; seal: string }) => Promise<void>
   authorizePase: (id: string) => Promise<void>
   rejectPase: (id: string, reason?: string) => Promise<void>
-  searchPases: (query: string, page?: number, size?: number) => Promise<void>
+  searchPases: (query: string, page?: number, size?: number, status?: string) => Promise<void>
   getStatistics: () => Promise<any>
 }
 
@@ -136,13 +136,13 @@ export const PaseProvider: React.FC<PaseProviderProps> = ({ children }) => {
     }
   }, [])
 
-  const searchPases = useCallback(async (query: string, page = 0, size = 10): Promise<void> => {
+  const searchPases = useCallback(async (query: string, page = 0, size = 10, status?: string): Promise<void> => {
     try {
       setLoading(true)
       setError(null)
 
       // Use getPasses method instead of globalSearch
-      const response = await apiClient.getPasses(page, size, undefined, query)
+      const response = await apiClient.getPasses(page, size, status, query)
 
       if (handleApiResponse(response, (data) => {
         setPases(data.content || []);

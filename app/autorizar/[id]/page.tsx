@@ -409,12 +409,16 @@ function AutorizarPageClient({ id }: { id: string }) {
         });
       }
 
-      // Redirect to dashboard after authorizing - solo para usuarios autorizados, NO para seguridad
-      if (user?.role === "autorizador" || user?.role === "admin") {
-        setTimeout(() => {
-          router.push("/autorizar/dashboard")
-        }, 1500)
-      }
+      // Redirect based on user role
+  if (user?.role === "autorizador") {
+    setTimeout(() => {
+      router.push("/autorizar/dashboard")
+    }, 1500)
+  } else if (user?.role === "admin") {
+    setTimeout(() => {
+      router.push("/admin")
+    }, 1500)
+  }
     } catch (error) {
       console.error("Error al procesar pase:", error)
       toast({

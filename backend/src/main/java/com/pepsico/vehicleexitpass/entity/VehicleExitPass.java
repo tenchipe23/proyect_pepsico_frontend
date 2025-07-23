@@ -15,7 +15,10 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "pases")
+@Table(name = "pases", indexes = {
+    @Index(name = "idx_operador_nombre", columnList = "operador_nombre"),
+    @Index(name = "idx_tractor_placa", columnList = "tractor_placa")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class VehicleExitPass {
     

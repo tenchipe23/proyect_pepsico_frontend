@@ -61,12 +61,52 @@ public interface VehicleExitPassRepository extends JpaRepository<VehicleExitPass
            "LOWER(p.razonSocial) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(p.tractorEco) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(p.tractorPlaca) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.remolque1Eco, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.remolque1Placa, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.remolque2Eco, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.remolque2Placa, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.ecoDolly, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.placasDolly, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.operadorNombre, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.operadorApellidoPaterno, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.operadorApellidoMaterno, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "(p.operador IS NOT NULL AND (" +
            "  LOWER(p.operador.nombre) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "  LOWER(p.operador.apellido) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "  LOWER(p.operador.email) LIKE LOWER(CONCAT('%', :query, '%'))" +
            ")) OR " +
            "LOWER(COALESCE(p.comentarios, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(CAST(p.estado AS string)) LIKE LOWER(CONCAT('%', :query, '%'))")
+           "LOWER(CAST(p.estado AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(TO_CHAR(p.fecha, 'YYYY-MM-DD'), '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " + 
+           "LOWER(COALESCE(TO_CHAR(p.fechaCreacion, 'YYYY-MM-DD HH24:MI:SS'), '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " + 
+           "LOWER(COALESCE(TO_CHAR(p.fechaFirma, 'YYYY-MM-DD HH24:MI:SS'), '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " + 
+           "LOWER(COALESCE(TO_CHAR(p.fechaAutorizacion, 'YYYY-MM-DD HH24:MI:SS'), '')) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<VehicleExitPass> globalSearch(@Param("query") String query, Pageable pageable);
+
+    @Query("SELECT p FROM VehicleExitPass p WHERE p.estado IN :statuses AND (" +
+           "LOWER(p.folio) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.razonSocial) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.tractorEco) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(p.tractorPlaca) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.remolque1Eco, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.remolque1Placa, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.remolque2Eco, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.remolque2Placa, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.ecoDolly, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.placasDolly, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.operadorNombre, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.operadorApellidoPaterno, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(p.operadorApellidoMaterno, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "(p.operador IS NOT NULL AND (" +
+           "  LOWER(p.operador.nombre) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "  LOWER(p.operador.apellido) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "  LOWER(p.operador.email) LIKE LOWER(CONCAT('%', :query, '%'))" +
+           ")) OR " +
+           "LOWER(COALESCE(p.comentarios, '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(CAST(p.estado AS string)) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(COALESCE(TO_CHAR(p.fecha, 'YYYY-MM-DD'), '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " + 
+           "LOWER(COALESCE(TO_CHAR(p.fechaCreacion, 'YYYY-MM-DD HH24:MI:SS'), '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " + 
+           "LOWER(COALESCE(TO_CHAR(p.fechaFirma, 'YYYY-MM-DD HH24:MI:SS'), '')) LIKE LOWER(CONCAT('%', :query, '%')) OR " + 
+           "LOWER(COALESCE(TO_CHAR(p.fechaAutorizacion, 'YYYY-MM-DD HH24:MI:SS'), '')) LIKE LOWER(CONCAT('%', :query, '%')) )")
+    Page<VehicleExitPass> globalSearchByStatuses(@Param("query") String query, @Param("statuses") List<PassStatus> statuses, Pageable pageable);
 }

@@ -23,11 +23,12 @@ export default function SeguridadPage() {
   // Debounced search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
+      const status = "FIRMADO,AUTORIZADO";
       if (searchQuery.trim()) {
-        searchPases(searchQuery.trim())
+        searchPases(searchQuery.trim(), 0, 50, status)
       } else {
         // Cargar tanto pases FIRMADO como AUTORIZADO
-        refreshPases(0, 50, "FIRMADO,AUTORIZADO", undefined) // Show both signed and authorized passes
+        refreshPases(0, 50, status, undefined) // Show both signed and authorized passes
       }
     }, 500)
 

@@ -25,8 +25,19 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 @RestController
 @RequestMapping("/passes")
+@Tag(name = "Pases de Salida", description = "API para gestionar los pases de salida de vehículos")
+@SecurityRequirement(name = "bearerAuth")
 public class VehicleExitPassController {
     
     @Autowired
@@ -71,13 +82,20 @@ public class VehicleExitPassController {
     
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
+    @Operation(summary = "Obtener todos los pases", description = "Obtiene una lista paginada de pases de salida con opciones de filtrado y búsqueda")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Pases encontrados exitosamente", 
+                    content = @Content(schema = @Schema(implementation = Page.class))),
+        @ApiResponse(responseCode = "400", description = "Parámetros de solicitud inválidos"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
     public ResponseEntity<?> getAllPasses(
-            @RequestParam(required = false, defaultValue = "0") Integer page,
-            @RequestParam(required = false, defaultValue = "10") Integer size,
-            @RequestParam(required = false, defaultValue = "fechaCreacion") String sortBy,
-            @RequestParam(required = false, defaultValue = "desc") String sortDir,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status) {
+            @Parameter(description = "Número de página (0-indexed)") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "Tamaño de página") @RequestParam(required = false, defaultValue = "10") Integer size,
+            @Parameter(description = "Campo para ordenar") @RequestParam(required = false, defaultValue = "fechaCreacion") String sortBy,
+            @Parameter(description = "Dirección de ordenamiento: asc o desc") @RequestParam(required = false, defaultValue = "desc") String sortDir,
+            @Parameter(description = "Término de búsqueda") @RequestParam(required = false) String search,
+            @Parameter(description = "Filtro por estado: pendiente, firmado, autorizado, rechazado") @RequestParam(required = false) String status) {
         
         try {
             // Set default values if not provided
@@ -97,26 +115,39 @@ public class VehicleExitPassController {
             
             Page<VehicleExitPassDto> passes;
             
-            if (status != null && search != null && !search.isEmpty()) {
+            if (search != null && !search.isEmpty()) {
                 try {
-                    String normalizedStatus = normalizeStatus(status);
-                    PassStatus passStatus = PassStatus.valueOf(normalizedStatus.toUpperCase());
-                    passes = passService.searchPassesByStatus(passStatus, search, pageable);
+                    if (status != null) {
+                        List<PassStatus> statusList;
+                        if (status.contains(",")) {
+                            String[] statusValues = status.split(",");
+                            statusList = new ArrayList<>();
+                            for (String statusValue : statusValues) {
+                                String normalizedStatus = normalizeStatus(statusValue.trim());
+                                statusList.add(PassStatus.valueOf(normalizedStatus.toUpperCase()));
+                            }
+                        } else {
+                            String normalizedStatus = normalizeStatus(status);
+                            statusList = List.of(PassStatus.valueOf(normalizedStatus.toUpperCase()));
+                        }
+                        passes = passService.globalSearchByStatuses(search, statusList, pageable);
+                    } else {
+                        passes = passService.globalSearch(search, pageable);
+                    }
                 } catch (IllegalArgumentException e) {
                     return createErrorResponse("Invalid status value: " + status + ". Valid values are: pendiente, firmado, autorizado, rechazado", HttpStatus.BAD_REQUEST);
+                } catch (Exception e) {
+                    return createErrorResponse("Error searching passes: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
                 }
             } else if (status != null) {
                 try {
-                    // Check if status contains multiple values separated by commas
                     if (status.contains(",")) {
                         String[] statusValues = status.split(",");
                         List<PassStatus> statusList = new ArrayList<>();
-                        
                         for (String statusValue : statusValues) {
                             String normalizedStatus = normalizeStatus(statusValue.trim());
                             statusList.add(PassStatus.valueOf(normalizedStatus.toUpperCase()));
                         }
-                        
                         passes = passService.getPassesByStatusList(statusList, pageable);
                     } else {
                         String normalizedStatus = normalizeStatus(status);
@@ -125,12 +156,6 @@ public class VehicleExitPassController {
                     }
                 } catch (IllegalArgumentException e) {
                     return createErrorResponse("Invalid status value: " + status + ". Valid values are: pendiente, firmado, autorizado, rechazado", HttpStatus.BAD_REQUEST);
-                }
-            } else if (search != null && !search.isEmpty()) {
-                try {
-                    passes = passService.searchPasses(search, pageable);
-                } catch (Exception e) {
-                    return createErrorResponse("Error searching passes: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
                 }
             } else {
                 try {
@@ -149,21 +174,41 @@ public class VehicleExitPassController {
     
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<VehicleExitPassDto> getPassById(@PathVariable String id) {
+    @Operation(summary = "Obtener pase por ID", description = "Obtiene un pase de salida específico por su ID")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Pase encontrado exitosamente", 
+                    content = @Content(schema = @Schema(implementation = VehicleExitPassDto.class))),
+        @ApiResponse(responseCode = "404", description = "Pase no encontrado")
+    })
+    public ResponseEntity<VehicleExitPassDto> getPassById(
+            @Parameter(description = "ID del pase") @PathVariable String id) {
         VehicleExitPassDto pass = passService.getPassById(id);
         return ResponseEntity.ok(pass);
     }
     
     @GetMapping("/folio/{folio}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<VehicleExitPassDto> getPassByFolio(@PathVariable String folio) {
+    @Operation(summary = "Obtener pase por folio", description = "Obtiene un pase de salida específico por su número de folio")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Pase encontrado exitosamente", 
+                    content = @Content(schema = @Schema(implementation = VehicleExitPassDto.class))),
+        @ApiResponse(responseCode = "404", description = "Pase no encontrado")
+    })
+    public ResponseEntity<VehicleExitPassDto> getPassByFolio(
+            @Parameter(description = "Número de folio del pase") @PathVariable String folio) {
         VehicleExitPassDto pass = passService.getPassByFolio(folio);
         return ResponseEntity.ok(pass);
     }
     
     @PostMapping("/create")
-    
-    public ResponseEntity<?> createPass(@Valid @RequestBody Map<String, Object> passData) {
+    @Operation(summary = "Crear nuevo pase", description = "Crea un nuevo pase de salida de vehículo")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Pase creado exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Datos de solicitud inválidos"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    public ResponseEntity<?> createPass(
+            @Parameter(description = "Datos del pase a crear") @Valid @RequestBody Map<String, Object> passData) {
         try {
             // Log de depuración
             System.out.println("Datos recibidos en createPass: " + passData);
@@ -252,16 +297,32 @@ public class VehicleExitPassController {
     
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> updatePass(@PathVariable String id, 
-                                                        @Valid @RequestBody VehicleExitPassDto passDto) {
+    @Operation(summary = "Actualizar pase", description = "Actualiza un pase de salida existente")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Pase actualizado exitosamente", 
+                    content = @Content(schema = @Schema(implementation = VehicleExitPassDto.class))),
+        @ApiResponse(responseCode = "404", description = "Pase no encontrado"),
+        @ApiResponse(responseCode = "400", description = "Datos de solicitud inválidos")
+    })
+    public ResponseEntity<VehicleExitPassDto> updatePass(
+            @Parameter(description = "ID del pase") @PathVariable String id, 
+            @Parameter(description = "Datos actualizados del pase") @Valid @RequestBody VehicleExitPassDto passDto) {
         VehicleExitPassDto updatedPass = passService.updatePass(id, passDto);
         return ResponseEntity.ok(updatedPass);
     }
     
     @PostMapping("/{id}/sign")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> signPass(@PathVariable String id, 
-                                                      @RequestBody Map<String, String> signData) {
+    @Operation(summary = "Firmar pase", description = "Firma un pase de salida con firma y sello")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Pase firmado exitosamente", 
+                    content = @Content(schema = @Schema(implementation = VehicleExitPassDto.class))),
+        @ApiResponse(responseCode = "404", description = "Pase no encontrado"),
+        @ApiResponse(responseCode = "400", description = "Datos de solicitud inválidos")
+    })
+    public ResponseEntity<VehicleExitPassDto> signPass(
+            @Parameter(description = "ID del pase") @PathVariable String id, 
+            @Parameter(description = "Datos de firma y sello") @RequestBody Map<String, String> signData) {
         String signature = signData.get("signature");
         String seal = signData.get("seal");
         VehicleExitPassDto signedPass = passService.signPass(id, signature, seal);
@@ -270,15 +331,31 @@ public class VehicleExitPassController {
     
     @PostMapping("/{id}/authorize")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> authorizePass(@PathVariable String id) {
+    @Operation(summary = "Autorizar pase", description = "Autoriza un pase de salida previamente firmado")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Pase autorizado exitosamente", 
+                    content = @Content(schema = @Schema(implementation = VehicleExitPassDto.class))),
+        @ApiResponse(responseCode = "404", description = "Pase no encontrado"),
+        @ApiResponse(responseCode = "400", description = "El pase no está en estado firmado")
+    })
+    public ResponseEntity<VehicleExitPassDto> authorizePass(
+            @Parameter(description = "ID del pase") @PathVariable String id) {
         VehicleExitPassDto authorizedPass = passService.authorizePass(id);
         return ResponseEntity.ok(authorizedPass);
     }
     
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<VehicleExitPassDto> rejectPass(@PathVariable String id, 
-                                                        @RequestBody Map<String, String> rejectData) {
+    @Operation(summary = "Rechazar pase", description = "Rechaza un pase de salida con motivo de rechazo")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Pase rechazado exitosamente", 
+                    content = @Content(schema = @Schema(implementation = VehicleExitPassDto.class))),
+        @ApiResponse(responseCode = "404", description = "Pase no encontrado"),
+        @ApiResponse(responseCode = "400", description = "Datos de solicitud inválidos")
+    })
+    public ResponseEntity<VehicleExitPassDto> rejectPass(
+            @Parameter(description = "ID del pase") @PathVariable String id, 
+            @Parameter(description = "Motivo de rechazo") @RequestBody Map<String, String> rejectData) {
         String reason = rejectData.get("reason");
         VehicleExitPassDto rejectedPass = passService.rejectPass(id, reason);
         return ResponseEntity.ok(rejectedPass);
@@ -286,13 +363,23 @@ public class VehicleExitPassController {
     
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR')")
-    public ResponseEntity<?> deletePass(@PathVariable String id) {
+    @Operation(summary = "Eliminar pase", description = "Elimina un pase de salida existente")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Pase eliminado exitosamente"),
+        @ApiResponse(responseCode = "404", description = "Pase no encontrado")
+    })
+    public ResponseEntity<?> deletePass(
+            @Parameter(description = "ID del pase") @PathVariable String id) {
         passService.deletePass(id);
         return ResponseEntity.ok().body("{\"message\": \"Pass deleted successfully!\"}");
     }
     
     @GetMapping("/stats/count-by-status")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
+    @Operation(summary = "Obtener conteo por estado", description = "Obtiene el conteo de pases por cada estado")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Conteo obtenido exitosamente")
+    })
     public ResponseEntity<Map<String, Long>> getPassCountByStatus() {
         Map<String, Long> counts = new HashMap<>();
         
@@ -306,7 +393,13 @@ public class VehicleExitPassController {
     
     @GetMapping("/stats/count-by-status/{status}")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
-    public ResponseEntity<?> getPassCountBySpecificStatus(@PathVariable String status) {
+    @Operation(summary = "Obtener conteo por estado específico", description = "Obtiene el conteo de pases para un estado específico")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Conteo obtenido exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Estado inválido")
+    })
+    public ResponseEntity<?> getPassCountBySpecificStatus(
+            @Parameter(description = "Estado del pase (pendiente, firmado, autorizado, rechazado)") @PathVariable String status) {
         try {
             PassStatus passStatus = PassStatus.valueOf(status.toUpperCase());
             long count = passService.getPassCountByStatus(passStatus);
@@ -318,6 +411,10 @@ public class VehicleExitPassController {
     
     @GetMapping("/stats/count-created-today")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
+    @Operation(summary = "Obtener conteo de pases creados hoy", description = "Obtiene el número de pases creados en el día actual")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Conteo obtenido exitosamente")
+    })
     public ResponseEntity<Long> getPassCountCreatedToday() {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         long count = passService.getPassCountCreatedSince(startOfDay);
@@ -326,6 +423,10 @@ public class VehicleExitPassController {
     
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'AUTORIZADOR', 'SEGURIDAD')")
+    @Operation(summary = "Obtener estadísticas de pases", description = "Obtiene estadísticas generales sobre los pases de salida")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Estadísticas obtenidas exitosamente")
+    })
     public ResponseEntity<Map<String, Object>> getPassStatistics() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalPasses", passService.getAllPasses().size());

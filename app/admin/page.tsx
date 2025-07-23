@@ -30,7 +30,7 @@ export default function AdminPage() {
 
   return (
     <AuthRedirect allowedRoles={["admin"]}>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto py-8">
         <AppHeader
           title="Panel de Administración"
           description={`Bienvenido, ${user?.name || "Administrador"}. Gestione usuarios y pases de salida.`}
