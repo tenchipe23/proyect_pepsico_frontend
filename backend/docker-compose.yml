@@ -28,7 +28,7 @@ services:
       DB_USERNAME: pepsico_user       # Match with POSTGRES_USER
       DB_PASSWORD: pepsico123         # Match with POSTGRES_PASSWORD
       JWT_SECRET: mySecretKey123456789012345678901234567890
-      CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001,https://v0-create-interface-design-lime.vercel.app
     ports:
       - "8080:8080"
     depends_on:
