@@ -6,13 +6,11 @@
     "backend:build": "cd backend && mvn clean install",
     "backend:start": "cd backend && mvn spring-boot:run -Dspring.profiles.active=local",
     "build": "next build",
-    "build:vercel": "next build && next export",
     "db:setup": "createdb pepsico_vehicle_pass && psql -d postgres -c \"CREATE USER pepsico_user WITH PASSWORD 'pepsico123';\" && psql -d postgres -c \"GRANT ALL PRIVILEGES ON DATABASE pepsico_vehicle_pass TO pepsico_user;\"",
     "dev": "next dev",
     "dev:full": "./scripts/start-development.sh",
     "lint": "next lint",
-    "start": "next start",
-    "postbuild": "echo 'Build completed successfully'"
+    "start": "next start"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
