@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://192.0.0.1:8080/api"
 
 // Configuración de axios o fetch
 export const apiClient = {
